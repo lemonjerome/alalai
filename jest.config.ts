@@ -31,6 +31,8 @@ const config: Config = {
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
       },
+      // bson ships as ESM; transform it so Jest's CommonJS runner can handle it
+      transformIgnorePatterns: ['node_modules/(?!(bson)/)'],
       transform: {
         '^.+\\.tsx?$': [
           'ts-jest',
@@ -40,6 +42,7 @@ const config: Config = {
             },
           },
         ],
+        '^.+\\.mjs$': ['ts-jest', { tsconfig: { module: 'commonjs' } }],
       },
     },
   ],

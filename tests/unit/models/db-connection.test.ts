@@ -1,16 +1,13 @@
 /**
  * DB connection utility tests.
- * We mock mongoose.connect so no real DB connection is made.
+ * We mock mongoose completely to avoid loading bson (which ships as ESM
+ * and isn't compatible with Jest's CommonJS transform).
  */
 
-// Mock mongoose before importing connectDB
-jest.mock('mongoose', () => {
-  const actual = jest.requireActual<typeof import('mongoose')>('mongoose');
-  return {
-    ...actual,
-    connect: jest.fn().mockResolvedValue({ connection: { readyState: 1 } }),
-  };
-});
+// Full mock — no jest.requireActual to avoid the bson ESM import error
+jest.mock('mongoose', () => ({
+  connect: jest.fn().mockResolvedValue({ connection: { readyState: 1 } }),
+}));
 
 describe('connectDB', () => {
   const originalEnv = process.env;
@@ -20,13 +17,18 @@ describe('connectDB', () => {
     process.env = { ...originalEnv, MONGODB_URI: 'mongodb://localhost:27017/test' };
     // Reset the global cache before each test
     (global as Record<string, unknown>).__mongoose = undefined;
+
+    // Re-apply the mock after module reset
+    jest.mock('mongoose', () => ({
+      connect: jest.fn().mockResolvedValue({ connection: { readyState: 1 } }),
+    }));
   });
 
   afterEach(() => {
     process.env = originalEnv;
   });
 
-  it('throws if MONGODB_URI is not set', async () => {
+  it('throws if MONGODB_URI is not set', () => {
     delete process.env.MONGODB_URI;
     expect(() => require('@/lib/db')).toThrow(
       'Please define MONGODB_URI in your .env.local file'
