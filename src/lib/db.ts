@@ -16,8 +16,8 @@ interface MongooseCache {
 }
 
 // Augment the global type to include our cache
+// `var` required by global augmentation syntax — TypeScript enforces this
 declare global {
-  // eslint-disable-next-line no-var
   var __mongoose: MongooseCache | undefined;
 }
 
