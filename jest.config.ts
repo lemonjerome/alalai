@@ -7,7 +7,6 @@ const config: Config = {
       testMatch: ['<rootDir>/tests/unit/**/*.test.{ts,tsx}'],
       preset: 'ts-jest',
       testEnvironment: 'jsdom',
-      setupFilesAfterFramework: undefined,
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         // Handle CSS imports
