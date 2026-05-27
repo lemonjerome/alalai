@@ -1,0 +1,91 @@
+version: '3.9'
+
+# Local development stack — mirrors production services but uses free/local equivalents.
+# Usage:
+#   docker compose up -d          # start all services
+#   docker compose up app         # start app (MongoDB auto-starts as dependency)
+#   docker compose logs -f app    # tail app logs
+#   docker compose down -v        # stop and wipe volumes
+
+services:
+  # ── MongoDB ────────────────────────────────────────────────────────────────
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: alalai
+      MONGO_INITDB_ROOT_PASSWORD: alalai_dev
+      MONGO_INITDB_DATABASE: alalai_local
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand("ping")']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis (Upstash-compatible local emulation) ─────────────────────────────
+  # The app's rate-limit.ts uses @upstash/redis REST client.
+  # upstash/redis Docker image provides a REST-compatible interface.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Next.js App ────────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      target: runner   # use the production runner stage
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      # MongoDB — points to local container
+      MONGODB_URI: mongodb://alalai:alalai_dev@mongo:27017/alalai_local?authSource=admin
+
+      # NextAuth — required
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: local-dev-secret-change-in-production
+
+      # Pusher — stub values (real-time won't work without real Pusher credentials)
+      PUSHER_APP_ID: local-pusher-id
+      PUSHER_KEY: local-pusher-key
+      PUSHER_SECRET: local-pusher-secret
+      PUSHER_CLUSTER: ap1
+      NEXT_PUBLIC_PUSHER_KEY: local-pusher-key
+      NEXT_PUBLIC_PUSHER_CLUSTER: ap1
+
+      # Cloudinary — stub values (avatar upload won't work without real credentials)
+      CLOUDINARY_CLOUD_NAME: local-cloud
+      CLOUDINARY_API_KEY: local-key
+      CLOUDINARY_API_SECRET: local-secret
+
+      # Upstash — rate limiting disabled in local (no REST endpoint available)
+      # To enable, run a Upstash-compatible proxy or set DISABLE_RATE_LIMIT=true
+      UPSTASH_REDIS_REST_URL: http://redis:6379
+      UPSTASH_REDIS_REST_TOKEN: local-token
+      DISABLE_RATE_LIMIT: 'true'
+
+      # Cron secret
+      CRON_SECRET: local-cron-secret
+
+volumes:
+  mongo_data:
+  redis_data:

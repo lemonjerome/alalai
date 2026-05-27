@@ -1,0 +1,15 @@
+.next/
+node_modules/
+.git/
+.claude/
+.env
+.env.local
+.env.*.local
+coverage/
+tests/
+docs/
+*.md
+!README.md
+.github/
+Dockerfile*
+docker-compose*

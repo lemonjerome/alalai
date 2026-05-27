@@ -8,8 +8,32 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  # Checks whether Vercel secrets are configured before attempting deploy.
+  # Secrets can't be referenced in job-level `if:` conditions directly —
+  # they must be read inside a step and exported as an output.
+  check-secrets:
+    name: Check Vercel secrets
+    runs-on: ubuntu-latest
+    outputs:
+      has-vercel: ${{ steps.check.outputs.has-vercel }}
+    steps:
+      - name: Detect VERCEL_TOKEN
+        id: check
+        run: |
+          if [ -n "$VERCEL_TOKEN" ]; then
+            echo "has-vercel=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-vercel=false" >> "$GITHUB_OUTPUT"
+            echo "⚠️  VERCEL_TOKEN secret is not set — skipping production deploy."
+            echo "    Add VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID as GitHub secrets to enable deploys."
+          fi
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
   deploy-production:
     name: Deploy to Vercel Production
+    needs: check-secrets
+    if: needs.check-secrets.outputs.has-vercel == 'true'
     runs-on: ubuntu-latest
 
     steps:

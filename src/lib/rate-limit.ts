@@ -35,8 +35,8 @@ export async function rateLimit(
   type: 'auth' | 'mutation' = 'auth',
   identifier?: string
 ): Promise<NextResponse | null> {
-  // In test environments, skip rate limiting
-  if (process.env.NODE_ENV === 'test') return null;
+  // Skip in test environments or when explicitly disabled (e.g. local Docker)
+  if (process.env.NODE_ENV === 'test' || process.env.DISABLE_RATE_LIMIT === 'true') return null;
 
   const limiter = type === 'auth' ? authLimiter : mutationLimiter;
   const key = identifier ?? (req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'anonymous');
