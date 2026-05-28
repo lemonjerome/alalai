@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -69,6 +70,9 @@ export function PatientNav() {
 
       {/* User footer */}
       <div className="border-t px-3 py-3 space-y-2">
+        <div className="flex items-center justify-between px-2 mb-1">
+          <NotificationBell />
+        </div>
         <div className="flex items-center gap-3 px-2">
           <Avatar className="h-8 w-8">
             <AvatarImage src={user?.profilePictureUrl} />

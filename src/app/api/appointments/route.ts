@@ -5,11 +5,14 @@ import { withAuth, type AuthenticatedRequest } from '@/lib/api-guard';
 import Appointment from '@/models/Appointment';
 import DoctorProfile from '@/models/DoctorProfile';
 import Availability from '@/models/Availability';
+import User from '@/models/User';
 import { createAppointmentSchema } from '@/lib/validations/appointment';
 import { getAvailableSlots } from '@/lib/availability-utils';
+import { NotificationService } from '@/lib/notification-service';
 import type { IDoctorProfileDocument } from '@/models/DoctorProfile';
 import type { IAvailabilityDocument } from '@/models/Availability';
 import type { IAppointmentDocument } from '@/models/Appointment';
+import type { IUserDocument } from '@/models/User';
 
 // GET /api/appointments — patient fetches own appointments
 export const GET = withAuth(
@@ -116,8 +119,23 @@ export const POST = withAuth(
       jitsiRoomId: `alalai-${appointmentId.toString()}`,
     });
 
-    // Notification stub — replaced in Phase 5.1
-    // await NotificationService.sendAppointmentBooked(...)
+    // Send notifications (best-effort — don't fail the booking if this errors)
+    try {
+      const [patientUser, doctorUser] = await Promise.all([
+        User.findById(req.session.user.id).select('name').lean<IUserDocument>(),
+        User.findById(doctorProfile.userId).select('name').lean<IUserDocument>(),
+      ]);
+      await NotificationService.sendAppointmentBooked({
+        patientId: req.session.user.id,
+        doctorId: String(doctorProfile.userId),
+        doctorName: doctorUser?.name ?? 'Doctor',
+        patientName: patientUser?.name ?? 'Patient',
+        appointmentId: String(appointmentId),
+        scheduledAt: requestedDate,
+      });
+    } catch {
+      // Non-fatal — appointment is already created
+    }
 
     return NextResponse.json({ appointment }, { status: 201 });
   },

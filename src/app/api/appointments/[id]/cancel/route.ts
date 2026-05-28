@@ -3,8 +3,11 @@ import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import { withAuth, type AuthenticatedRequest } from '@/lib/api-guard';
 import Appointment from '@/models/Appointment';
+import User from '@/models/User';
 import { cancelAppointmentSchema } from '@/lib/validations/appointment';
+import { NotificationService } from '@/lib/notification-service';
 import type { IAppointmentDocument } from '@/models/Appointment';
+import type { IUserDocument } from '@/models/User';
 
 // PATCH /api/appointments/[id]/cancel — patient or doctor
 export const PATCH = withAuth(
@@ -63,6 +66,28 @@ export const PATCH = withAuth(
       { status: 'cancelled', cancellationReason: parsed.data.cancellationReason },
       { new: true }
     ).lean<IAppointmentDocument>();
+
+    // Send notifications (best-effort)
+    try {
+      const cancelledBy: 'patient' | 'doctor' =
+        String(appointment.patientId) === userId ? 'patient' : 'doctor';
+      const [patientUser, doctorUser] = await Promise.all([
+        User.findById(appointment.patientId).select('name').lean<IUserDocument>(),
+        User.findById(appointment.doctorId).select('name').lean<IUserDocument>(),
+      ]);
+      await NotificationService.sendAppointmentCancelled({
+        patientId: String(appointment.patientId),
+        doctorId: String(appointment.doctorId),
+        doctorName: doctorUser?.name ?? 'Doctor',
+        patientName: patientUser?.name ?? 'Patient',
+        appointmentId: String(appointment._id),
+        scheduledAt: appointment.scheduledAt,
+        cancelledBy,
+        reason: parsed.data.cancellationReason,
+      });
+    } catch {
+      // Non-fatal
+    }
 
     return NextResponse.json({ appointment: updated });
   }
