@@ -1,13 +1,24 @@
-import { auth } from '@/lib/auth';
+/**
+ * Next.js 16 proxy (replaces middleware.ts).
+ * Runs in the Edge runtime — must only import Edge-compatible code.
+ * Uses authConfig (no mongoose/bcrypt) for JWT verification.
+ */
+
+import NextAuth from 'next-auth';
+import { authConfig } from '@/lib/auth.config';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+
+const { auth } = NextAuth(authConfig);
 
 // Routes that don't require authentication
 const PUBLIC_ROUTES = ['/', '/login', '/register'];
 // API routes handled by NextAuth itself
 const AUTH_API_PREFIX = '/api/auth';
 
-export default auth(function middleware(req: NextRequest & { auth: { user?: { role?: string } } | null }) {
+export default auth(function proxy(
+  req: NextRequest & { auth: { user?: { role?: string } } | null }
+) {
   const { pathname } = req.nextUrl;
   const session = req.auth;
 
@@ -16,7 +27,7 @@ export default auth(function middleware(req: NextRequest & { auth: { user?: { ro
     return NextResponse.next();
   }
 
-  // Allow public API routes (health check)
+  // Allow public API routes (health check, Pusher auth handled by its own route)
   if (pathname === '/api/health') {
     return NextResponse.next();
   }
@@ -40,7 +51,7 @@ export default auth(function middleware(req: NextRequest & { auth: { user?: { ro
     return NextResponse.redirect(new URL('/doctor/dashboard', req.url));
   }
 
-  // Prevent wrong roles from accessing role-specific API routes
+  // Prevent wrong roles from accessing doctor-only API routes
   if (pathname.startsWith('/api/doctors/me') && role !== 'doctor') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
