@@ -23,6 +23,11 @@ export const createMedicalRecordSchema = z.object({
 
 export const updateMedicalRecordSchema = createMedicalRecordSchema.partial();
 
-export type PrescriptionInput = z.infer<typeof prescriptionSchema>;
-export type CreateMedicalRecordInput = z.infer<typeof createMedicalRecordSchema>;
-export type UpdateMedicalRecordInput = z.infer<typeof updateMedicalRecordSchema>;
+// Input types (with optionals — used for API bodies)
+export type PrescriptionInput = z.input<typeof prescriptionSchema>;
+export type CreateMedicalRecordInput = z.input<typeof createMedicalRecordSchema>;
+export type UpdateMedicalRecordInput = z.input<typeof updateMedicalRecordSchema>;
+
+// Output types (after defaults — used for form values)
+export type PrescriptionOutput = z.output<typeof prescriptionSchema>;
+export type CreateMedicalRecordOutput = z.output<typeof createMedicalRecordSchema>;
