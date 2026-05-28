@@ -14,8 +14,19 @@ export interface AuthenticatedRequest extends NextRequest {
   };
 }
 
-type RouteHandler = (
+/** Handler type used inside withAuth — receives the augmented request with session. */
+type InnerHandler = (
   req: AuthenticatedRequest,
+  context: { params: Promise<Record<string, string>> }
+) => Promise<NextResponse> | NextResponse;
+
+/**
+ * Handler type returned by withAuth — accepts a plain NextRequest so that
+ * Next.js's route-handler type checker is satisfied when the result is
+ * exported directly as GET / POST / PATCH / DELETE.
+ */
+type OuterHandler = (
+  req: NextRequest,
   context: { params: Promise<Record<string, string>> }
 ) => Promise<NextResponse> | NextResponse;
 
@@ -36,7 +47,7 @@ interface WithAuthOptions {
  * }, { roles: ['doctor'] });
  * ```
  */
-export function withAuth(handler: RouteHandler, options: WithAuthOptions = {}): RouteHandler {
+export function withAuth(handler: InnerHandler, options: WithAuthOptions = {}): OuterHandler {
   return async function (req, context) {
     const session = await auth();
 
