@@ -1,11 +1,5 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI;
-
-if (!MONGODB_URI) {
-  throw new Error('Please define MONGODB_URI in your .env.local file');
-}
-
 /**
  * Global cache to prevent creating multiple connections during hot-reload
  * in Next.js development mode.
@@ -28,16 +22,20 @@ if (!global.__mongoose) {
 }
 
 export async function connectDB(): Promise<typeof mongoose> {
+  // Check env var at call time (not module evaluation) so the build
+  // phase can import this file without MONGODB_URI being set.
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    throw new Error('Please define MONGODB_URI in your environment variables');
+  }
+
   if (cached.conn) {
     return cached.conn;
   }
 
   if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,
-    };
-
-    cached.promise = mongoose.connect(MONGODB_URI!, opts);
+    const opts = { bufferCommands: false };
+    cached.promise = mongoose.connect(uri, opts);
   }
 
   try {
