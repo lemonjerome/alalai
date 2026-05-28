@@ -16,7 +16,7 @@ import type { NextRequest } from 'next/server';
 const PUBLIC_ROUTES = new Set(['/', '/login', '/register']);
 const AUTH_API_PREFIX = '/api/auth';
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Public pages and NextAuth API routes — always allow
