@@ -9,6 +9,7 @@ import User from '@/models/User';
 import { createAppointmentSchema } from '@/lib/validations/appointment';
 import { getAvailableSlots } from '@/lib/availability-utils';
 import { NotificationService } from '@/lib/notification-service';
+import { rateLimit } from '@/lib/rate-limit';
 import type { IDoctorProfileDocument } from '@/models/DoctorProfile';
 import type { IAvailabilityDocument } from '@/models/Availability';
 import type { IAppointmentDocument } from '@/models/Appointment';
@@ -45,6 +46,10 @@ export const GET = withAuth(
 // POST /api/appointments — patient books an appointment
 export const POST = withAuth(
   async (req: AuthenticatedRequest) => {
+    // Rate limit: 10 bookings per minute per user
+    const limited = await rateLimit(req, 'mutation', `book:${req.session.user.id}`);
+    if (limited) return limited;
+
     let body: unknown;
     try {
       body = await req.json();

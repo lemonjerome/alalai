@@ -14,6 +14,7 @@ import {
   User,
   LogOut,
   Heart,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -22,6 +23,7 @@ import { NotificationBell } from '@/components/notifications/NotificationBell';
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/doctors', label: 'Find Doctors', icon: Stethoscope },
+  { href: '/doctors/recommend', label: 'Find by Symptoms', icon: Sparkles },
   { href: '/appointments', label: 'Appointments', icon: CalendarDays },
   { href: '/records', label: 'Medical Records', icon: FileText },
   { href: '/notifications', label: 'Notifications', icon: Bell },

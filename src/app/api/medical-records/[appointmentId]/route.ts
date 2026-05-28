@@ -8,6 +8,7 @@ import User from '@/models/User';
 import { createMedicalRecordSchema, updateMedicalRecordSchema } from '@/lib/validations/medicalRecord';
 import { NotificationService } from '@/lib/notification-service';
 import { sanitizeUser } from '@/lib/utils';
+import { rateLimit } from '@/lib/rate-limit';
 import type { IMedicalRecordDocument } from '@/models/MedicalRecord';
 import type { IAppointmentDocument } from '@/models/Appointment';
 import type { IUserDocument } from '@/models/User';
@@ -46,6 +47,10 @@ export const GET = withAuth(
 export const POST = withAuth(
   async (req: AuthenticatedRequest, { params }) => {
     const { appointmentId } = await params;
+
+    // Rate limit: 10 record creations per minute per doctor
+    const limited = await rateLimit(req, 'mutation', `record:${req.session.user.id}`);
+    if (limited) return limited;
 
     if (!mongoose.Types.ObjectId.isValid(appointmentId)) {
       return NextResponse.json({ error: 'Invalid appointment ID' }, { status: 400 });
