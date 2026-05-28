@@ -1,0 +1,125 @@
+import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
+import { connectDB } from '@/lib/db';
+import { withAuth, type AuthenticatedRequest } from '@/lib/api-guard';
+import Appointment from '@/models/Appointment';
+import DoctorProfile from '@/models/DoctorProfile';
+import Availability from '@/models/Availability';
+import { createAppointmentSchema } from '@/lib/validations/appointment';
+import { getAvailableSlots } from '@/lib/availability-utils';
+import type { IDoctorProfileDocument } from '@/models/DoctorProfile';
+import type { IAvailabilityDocument } from '@/models/Availability';
+import type { IAppointmentDocument } from '@/models/Appointment';
+
+// GET /api/appointments — patient fetches own appointments
+export const GET = withAuth(
+  async (req: AuthenticatedRequest) => {
+    await connectDB();
+
+    const { searchParams } = req.nextUrl;
+    const status = searchParams.get('status');
+    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
+    const limit = Math.min(50, parseInt(searchParams.get('limit') ?? '20', 10));
+
+    const query: Record<string, unknown> = { patientId: req.session.user.id };
+    if (status) query.status = status;
+
+    const skip = (page - 1) * limit;
+    const [appointments, total] = await Promise.all([
+      Appointment.find(query)
+        .sort({ scheduledAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Appointment.countDocuments(query),
+    ]);
+
+    return NextResponse.json({ appointments, total, page, pages: Math.ceil(total / limit) });
+  },
+  { roles: ['patient'] }
+);
+
+// POST /api/appointments — patient books an appointment
+export const POST = withAuth(
+  async (req: AuthenticatedRequest) => {
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
+
+    const parsed = createAppointmentSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const { doctorId, scheduledAt, durationMinutes } = parsed.data;
+
+    if (!mongoose.Types.ObjectId.isValid(doctorId)) {
+      return NextResponse.json({ error: 'Invalid doctor ID' }, { status: 400 });
+    }
+
+    await connectDB();
+
+    // Find doctor's DoctorProfile (doctorId here = DoctorProfile._id)
+    const doctorProfile = await DoctorProfile.findById(doctorId)
+      .select('_id userId')
+      .lean<IDoctorProfileDocument>();
+
+    if (!doctorProfile) {
+      return NextResponse.json({ error: 'Doctor not found' }, { status: 404 });
+    }
+
+    const requestedDate = new Date(scheduledAt);
+
+    // Validate slot is available
+    const avails = await Availability.find({
+      doctorId: doctorProfile._id,
+      isActive: true,
+    }).lean<IAvailabilityDocument[]>();
+
+    const existingAppts = await Appointment.find({
+      doctorId: doctorProfile.userId,
+      scheduledAt: {
+        $gte: new Date(requestedDate.toISOString().slice(0, 10)),
+        $lt: new Date(
+          new Date(requestedDate.toISOString().slice(0, 10)).getTime() + 24 * 60 * 60 * 1000
+        ),
+      },
+      status: { $in: ['pending', 'confirmed'] },
+    }).lean<IAppointmentDocument[]>();
+
+    const availableSlots = getAvailableSlots(requestedDate, avails, existingAppts);
+    const requestedISO = requestedDate.toISOString();
+    const slotExists = availableSlots.some((s) => s.startISO === requestedISO);
+
+    if (!slotExists) {
+      return NextResponse.json(
+        { error: 'The selected time slot is not available' },
+        { status: 409 }
+      );
+    }
+
+    const appointmentId = new mongoose.Types.ObjectId();
+    const appointment = await Appointment.create({
+      _id: appointmentId,
+      patientId: req.session.user.id,
+      doctorId: doctorProfile.userId,
+      doctorProfileId: doctorProfile._id,
+      scheduledAt: requestedDate,
+      durationMinutes,
+      status: 'confirmed',
+      jitsiRoomId: `alalai-${appointmentId.toString()}`,
+    });
+
+    // Notification stub — replaced in Phase 5.1
+    // await NotificationService.sendAppointmentBooked(...)
+
+    return NextResponse.json({ appointment }, { status: 201 });
+  },
+  { roles: ['patient'] }
+);
