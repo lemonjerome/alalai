@@ -41,7 +41,6 @@ export function LoginForm() {
       }
 
       toast.success('Welcome back!');
-      // Redirect based on role — middleware will enforce correct dashboard
       router.push('/');
       router.refresh();
     } catch {

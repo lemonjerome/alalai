@@ -8,7 +8,6 @@ import { sanitizeUser } from '@/lib/utils';
 import { rateLimit } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
-  // Rate limit: 5 requests per 10 minutes per IP
   const limited = await rateLimit(req, 'auth');
   if (limited) return limited;
 
@@ -19,7 +18,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  // Validate with Zod discriminated union on `role`
   const parsed = registerSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
@@ -32,17 +30,14 @@ export async function POST(req: NextRequest) {
 
   await connectDB();
 
-  // Check for duplicate email
   const existing = await User.findOne({ email: data.email }).lean();
   if (existing) {
     return NextResponse.json({ error: 'Email already registered' }, { status: 409 });
   }
 
-  // Hash password
   const bcrypt = await import('bcryptjs');
   const passwordHash = await bcrypt.hash(data.password, 12);
 
-  // Create user
   const user = await User.create({
     email: data.email,
     name: data.name,
@@ -51,7 +46,6 @@ export async function POST(req: NextRequest) {
     passwordHash,
   });
 
-  // Create role-specific profile
   if (data.role === 'patient') {
     await PatientProfile.create({ userId: user._id });
   } else {
@@ -63,14 +57,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Never expose passwordHash
-  const safeUser = sanitizeUser(user.toObject());
-
   return NextResponse.json(
-    {
-      message: 'Registration successful',
-      user: safeUser,
-    },
+    { message: 'Registration successful', user: sanitizeUser(user.toObject()) },
     { status: 201 }
   );
 }

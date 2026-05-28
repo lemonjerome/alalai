@@ -1,9 +1,3 @@
-/**
- * Full NextAuth configuration for API routes (Node.js runtime only).
- * Extends authConfig with the Credentials provider that uses mongoose + bcrypt.
- * Do NOT import this file from middleware/proxy — use auth.config.ts there.
- */
-
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import mongoose from 'mongoose';
@@ -30,7 +24,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         await connectDB();
 
-        // Explicitly select passwordHash since it has select: false
         const user = await User.findOne({ email }).select('+passwordHash').lean();
         if (!user) return null;
 
@@ -38,7 +31,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const isValid = await bcrypt.compare(password, user.passwordHash);
         if (!isValid) return null;
 
-        // Build doctorProfileId if applicable
         let doctorProfileId: string | undefined;
         if (user.role === 'doctor') {
           const DoctorProfile = (await import('@/models/DoctorProfile')).default;

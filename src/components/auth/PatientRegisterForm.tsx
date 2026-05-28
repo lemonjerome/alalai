@@ -18,7 +18,6 @@ import { Button } from '@/components/ui/button';
 import { registerPatientSchema } from '@/lib/validations/auth';
 import type { z } from 'zod';
 
-// Use input type so react-hook-form can represent optional/unset fields pre-transform
 type PatientFormValues = z.input<typeof registerPatientSchema>;
 
 export function PatientRegisterForm() {
@@ -55,7 +54,6 @@ export function PatientRegisterForm() {
         return;
       }
 
-      // Auto sign-in after successful registration
       const signInResult = await signIn('credentials', {
         email: values.email,
         password: values.password,
