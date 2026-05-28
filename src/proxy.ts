@@ -1,45 +1,48 @@
 /**
- * Next.js 16 proxy (replaces middleware.ts).
- * Runs in the Edge runtime — must only import Edge-compatible code.
- * Uses authConfig (no mongoose/bcrypt) for JWT verification.
+ * Next.js 16 proxy (Edge runtime).
+ *
+ * Must NOT import NextAuth() — even with an empty providers config, calling
+ * NextAuth() pulls in the full next-auth bundle which depends on Node.js
+ * 'stream' and crashes in the Edge runtime.
+ *
+ * Instead we use `getToken` from `next-auth/jwt` which only relies on `jose`
+ * (Edge-compatible) to verify the encrypted JWT cookie.
  */
 
-import NextAuth from 'next-auth';
-import { authConfig } from '@/lib/auth.config';
+import { getToken } from 'next-auth/jwt';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const { auth } = NextAuth(authConfig);
-
-// Routes that don't require authentication
-const PUBLIC_ROUTES = ['/', '/login', '/register'];
-// API routes handled by NextAuth itself
+const PUBLIC_ROUTES = new Set(['/', '/login', '/register']);
 const AUTH_API_PREFIX = '/api/auth';
 
-export default auth(function proxy(
-  req: NextRequest & { auth: { user?: { role?: string } } | null }
-) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const session = req.auth;
 
-  // Allow public routes and NextAuth API routes
-  if (PUBLIC_ROUTES.includes(pathname) || pathname.startsWith(AUTH_API_PREFIX)) {
+  // Public pages and NextAuth API routes — always allow
+  if (PUBLIC_ROUTES.has(pathname) || pathname.startsWith(AUTH_API_PREFIX)) {
     return NextResponse.next();
   }
 
-  // Allow public API routes (health check, Pusher auth handled by its own route)
+  // Health check — no auth required
   if (pathname === '/api/health') {
     return NextResponse.next();
   }
 
-  // Unauthenticated users → redirect to login
-  if (!session?.user) {
+  // Verify JWT cookie (uses jose — Edge-safe, no Node.js APIs)
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+
+  // Unauthenticated → redirect to login
+  if (!token) {
     const loginUrl = new URL('/login', req.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  const role = session.user.role;
+  const role = token.role as string | undefined;
 
   // Prevent patients from accessing doctor routes
   if (pathname.startsWith('/doctor') && role !== 'doctor') {
@@ -51,16 +54,15 @@ export default auth(function proxy(
     return NextResponse.redirect(new URL('/doctor/dashboard', req.url));
   }
 
-  // Prevent wrong roles from accessing doctor-only API routes
+  // Block wrong-role access to doctor-only API routes
   if (pathname.startsWith('/api/doctors/me') && role !== 'doctor') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
-  // Match all routes except static files and Next.js internals
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
