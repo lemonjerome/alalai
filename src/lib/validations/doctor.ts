@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
 export const updateDoctorProfileSchema = z.object({
+  // User fields (passed through to User model)
+  name: z.string().min(2).trim().optional(),
+  phone: z.string().trim().optional(),
+  // DoctorProfile fields
   licenseNumber: z.string().trim().optional(),
   specialization: z.array(z.string().min(1)).min(1).optional(),
   bio: z.string().trim().optional(),
