@@ -28,10 +28,11 @@ describe('connectDB', () => {
     process.env = originalEnv;
   });
 
-  it('throws if MONGODB_URI is not set', () => {
+  it('throws if MONGODB_URI is not set', async () => {
     delete process.env.MONGODB_URI;
-    expect(() => require('@/lib/db')).toThrow(
-      'Please define MONGODB_URI in your .env.local file'
+    const { connectDB } = require('@/lib/db') as { connectDB: () => Promise<unknown> };
+    await expect(connectDB()).rejects.toThrow(
+      'Please define MONGODB_URI in your environment variables'
     );
   });
 
