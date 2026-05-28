@@ -94,14 +94,14 @@ export function PrescriptionCard({
         </div>
       </div>
 
-      {/* Print styles */}
-      <style jsx global>{`
+      {/* Print styles — dangerouslySetInnerHTML avoids styled-jsx (not allowed in RSC) */}
+      <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           body * { visibility: hidden; }
           #prescription-card, #prescription-card * { visibility: visible; }
           #prescription-card { position: absolute; inset: 0; margin: 2rem; }
         }
-      `}</style>
+      ` }} />
     </>
   );
 }
