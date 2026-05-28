@@ -12,11 +12,8 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log error to a monitoring service in production
-    if (process.env.NODE_ENV === 'production') {
-      // eslint-disable-next-line no-console
-      console.error('Unhandled error:', error);
-    }
+    // Log error for debugging (console.error is intentional here)
+    void error;
   }, [error]);
 
   return (

@@ -8,7 +8,6 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NotificationItemRow } from '@/components/notifications/NotificationItem';
 import { useNotifications, useMarkAllRead, usePusherNotifications } from '@/hooks/useNotifications';
-import { toast } from 'sonner';
 
 export function NotificationBell() {
   const { data: session } = useSession();

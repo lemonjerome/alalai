@@ -1,6 +1,6 @@
 'use client';
 
-import { useDoctorAppointments, useCompleteAppointment } from '@/hooks/useAppointments';
+import { useDoctorAppointments } from '@/hooks/useAppointments';
 import { AppointmentCard } from '@/components/appointments/AppointmentCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';

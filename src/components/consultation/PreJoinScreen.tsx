@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Video, Clock, Calendar } from 'lucide-react';
@@ -59,10 +59,11 @@ export function PreJoinScreen({
   doctorName,
   scheduledAt,
   durationMinutes,
-  role,
+  role: _role,
   onJoin,
 }: PreJoinScreenProps) {
-  const now = Date.now();
+  // Use useState so the join window is computed once on mount (not re-evaluated during re-renders)
+  const [now] = useState(() => Date.now());
   const apptTime = scheduledAt.getTime();
   const isWithinWindow = Math.abs(now - apptTime) <= 15 * 60 * 1000;
   const isTooEarly = now < apptTime - 15 * 60 * 1000;

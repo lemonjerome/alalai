@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
@@ -84,6 +84,9 @@ export default function DoctorProfilePage() {
       isAcceptingPatients: true,
     },
   });
+
+  // useWatch is memoization-safe (unlike form.watch())
+  const isAcceptingPatients = useWatch({ control: form.control, name: 'isAcceptingPatients' });
 
   // Populate form when data loads
   useEffect(() => {
@@ -230,7 +233,7 @@ export default function DoctorProfilePage() {
                 </p>
               </div>
               <Switch
-                checked={form.watch('isAcceptingPatients')}
+                checked={isAcceptingPatients}
                 onCheckedChange={(v: boolean) => form.setValue('isAcceptingPatients', v)}
               />
             </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
@@ -97,6 +97,10 @@ export function AvailabilityManager() {
       isActive: true,
     },
   });
+
+  // useWatch is memoization-safe (unlike form.watch())
+  const watchedDayOfWeek = useWatch({ control: form.control, name: 'dayOfWeek' });
+  const watchedDuration = useWatch({ control: form.control, name: 'slotDurationMinutes' });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['myAvailability'] });
 
@@ -213,7 +217,7 @@ export function AvailabilityManager() {
             <div className="space-y-1.5">
               <Label>Day of Week</Label>
               <Select
-                value={String(form.watch('dayOfWeek'))}
+                value={String(watchedDayOfWeek)}
                 onValueChange={(v: string | null) => form.setValue('dayOfWeek', Number(v ?? 0))}
               >
                 <SelectTrigger>
@@ -254,7 +258,7 @@ export function AvailabilityManager() {
             <div className="space-y-1.5">
               <Label>Appointment Duration</Label>
               <Select
-                value={String(form.watch('slotDurationMinutes'))}
+                value={String(watchedDuration)}
                 onValueChange={(v: string | null) => form.setValue('slotDurationMinutes', Number(v ?? 30))}
               >
                 <SelectTrigger>

@@ -1,12 +1,10 @@
 'use client';
 
-import { useState } from 'react';
 import { SymptomChecker } from '@/components/doctors/SymptomChecker';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, FlaskConical } from 'lucide-react';
 
 export default function DoctorRecommendPage() {
-  const [recommendedSpecs, setRecommendedSpecs] = useState<string[]>([]);
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -43,7 +41,7 @@ export default function DoctorRecommendPage() {
           <span className="text-xs text-gray-400">(static mapping — not AI)</span>
         </div>
 
-        <SymptomChecker onSpecializations={setRecommendedSpecs} />
+        <SymptomChecker />
       </div>
 
       {/* Footer note */}

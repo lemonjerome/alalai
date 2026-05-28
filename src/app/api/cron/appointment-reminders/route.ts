@@ -2,11 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Appointment from '@/models/Appointment';
 import User from '@/models/User';
-import DoctorProfile from '@/models/DoctorProfile';
 import { NotificationService } from '@/lib/notification-service';
 import type { IAppointmentDocument } from '@/models/Appointment';
 import type { IUserDocument } from '@/models/User';
-import type { IDoctorProfileDocument } from '@/models/DoctorProfile';
 
 // GET /api/cron/appointment-reminders
 // Called by Vercel Cron (hourly). Requires Bearer CRON_SECRET header.

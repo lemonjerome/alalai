@@ -10,7 +10,6 @@ import { Badge } from '@/components/ui/badge';
 import { CalendarDays, Stethoscope, Bell, ArrowRight, Clock } from 'lucide-react';
 import type { Metadata } from 'next';
 import type { IAppointmentDocument } from '@/models/Appointment';
-import type { INotificationDocument } from '@/models/Notification';
 import type { IUserDocument } from '@/models/User';
 
 export const metadata: Metadata = { title: 'Dashboard — AlalAI' };

@@ -53,9 +53,8 @@ export default async function DoctorRecordDetailPage({
   const patient = patientUser ? sanitizeUser(patientUser) : null;
   const patientName = (patient as { name?: string } | null)?.name ?? 'Unknown Patient';
 
-  const isEditable = record
-    ? Date.now() - record.createdAt.getTime() <= EDIT_WINDOW_MS
-    : false;
+  // eslint-disable-next-line react-hooks/purity -- RSC, not a hook
+  const isEditable = record ? Date.now() - record.createdAt.getTime() <= EDIT_WINDOW_MS : false;
 
   return (
     <div className="p-6 max-w-2xl mx-auto">

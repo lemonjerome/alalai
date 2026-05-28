@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { useMyAppointments } from '@/hooks/useAppointments';
 import { AppointmentCard } from '@/components/appointments/AppointmentCard';
 import { Skeleton } from '@/components/ui/skeleton';

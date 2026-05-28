@@ -45,6 +45,7 @@ export default async function DoctorRecordsPage() {
   const apptMap = new Map(appointments.map((a) => [String(a._id), a]));
   const patientMap = new Map(patients.map((u) => [String(u._id), sanitizeUser(u)]));
 
+  // eslint-disable-next-line react-hooks/purity -- RSC, not a hook
   const now = Date.now();
 
   return (

@@ -39,7 +39,7 @@ export function PrescriptionForm() {
       </div>
 
       {fields.length === 0 && (
-        <p className="text-sm text-gray-500 italic">No prescriptions added. Click "Add Prescription" to add one.</p>
+        <p className="text-sm text-gray-500 italic">No prescriptions added. Click &quot;Add Prescription&quot; to add one.</p>
       )}
 
       {fields.map((field, index) => (
