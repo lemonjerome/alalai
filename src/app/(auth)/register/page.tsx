@@ -11,16 +11,16 @@ export const metadata: Metadata = {
 
 export default function RegisterPage() {
   return (
-    <Card>
-      <CardHeader className="space-y-1">
+    <Card className="flex flex-col max-h-[calc(100dvh-4rem)] overflow-hidden">
+      <CardHeader className="space-y-1 shrink-0">
         <CardTitle className="text-2xl font-bold text-center">Create an account</CardTitle>
         <CardDescription className="text-center">
           Join AlalAI as a patient or doctor
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 overflow-y-auto">
         <Tabs defaultValue="patient">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsList className="grid w-full grid-cols-2 h-10 mb-6">
             <TabsTrigger value="patient">I&apos;m a Patient</TabsTrigger>
             <TabsTrigger value="doctor">I&apos;m a Doctor</TabsTrigger>
           </TabsList>

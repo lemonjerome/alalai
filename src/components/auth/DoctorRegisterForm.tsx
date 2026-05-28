@@ -141,19 +141,39 @@ export function DoctorRegisterForm() {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="licenseNumber"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>PRC License Number</FormLabel>
-              <FormControl>
-                <Input placeholder="0123456" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="licenseNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>PRC License No.</FormLabel>
+                <FormControl>
+                  <Input placeholder="0123456" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="yearsOfExperience"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Years of Exp.</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={0}
+                    {...field}
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         {/* Specialization multi-select */}
         <FormField
@@ -210,24 +230,6 @@ export function DoctorRegisterForm() {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="yearsOfExperience"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Years of Experience</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min={0}
-                  {...field}
-                  onChange={(e) => field.onChange(Number(e.target.value))}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         <FormField
           control={form.control}
           name="password"
