@@ -20,7 +20,7 @@ export const GET = withAuth(
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ profile, user: sanitizeUser(user) });
+    return NextResponse.json({ doctorProfile: profile, user: sanitizeUser(user) });
   },
   { roles: ['doctor'] }
 );
@@ -67,7 +67,7 @@ export const PATCH = withAuth(
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ profile, user: sanitizeUser(user) });
+    return NextResponse.json({ doctorProfile: profile, user: sanitizeUser(user) });
   },
   { roles: ['doctor'] }
 );
