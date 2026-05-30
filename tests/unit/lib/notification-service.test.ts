@@ -26,9 +26,10 @@ import { NotificationService } from '@/lib/notification-service';
 function makeNotification(overrides: Record<string, unknown> = {}) {
   return {
     _id: 'notif-id-123',
-    type: 'appointment_booked',
+    type: 'appointment_request',
     title: 'Test',
     message: 'Test message',
+    link: '',
     data: {},
     isRead: false,
     createdAt: new Date(),
@@ -42,10 +43,10 @@ beforeEach(() => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// sendAppointmentBooked
+// sendBookingRequest (replaces the old sendAppointmentBooked)
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('NotificationService.sendAppointmentBooked', () => {
+describe('NotificationService.sendBookingRequest', () => {
   const params = {
     patientId: 'patient-1',
     doctorId: 'doctor-1',
@@ -56,31 +57,31 @@ describe('NotificationService.sendAppointmentBooked', () => {
   };
 
   it('creates two notifications — one for patient, one for doctor', async () => {
-    await NotificationService.sendAppointmentBooked(params);
+    await NotificationService.sendBookingRequest(params);
     expect(mockNotificationCreate).toHaveBeenCalledTimes(2);
   });
 
-  it('patient notification has correct userId', async () => {
-    await NotificationService.sendAppointmentBooked(params);
+  it('patient notification has correct userId and type', async () => {
+    await NotificationService.sendBookingRequest(params);
     const patientCall = mockNotificationCreate.mock.calls[0][0] as Record<string, unknown>;
     expect(patientCall.userId).toBe('patient-1');
-    expect(patientCall.type).toBe('appointment_booked');
+    expect(patientCall.type).toBe('appointment_request');
   });
 
   it('doctor notification has correct userId', async () => {
-    await NotificationService.sendAppointmentBooked(params);
+    await NotificationService.sendBookingRequest(params);
     const doctorCall = mockNotificationCreate.mock.calls[1][0] as Record<string, unknown>;
     expect(doctorCall.userId).toBe('doctor-1');
   });
 
   it('includes appointmentId in data', async () => {
-    await NotificationService.sendAppointmentBooked(params);
+    await NotificationService.sendBookingRequest(params);
     const patientCall = mockNotificationCreate.mock.calls[0][0] as Record<string, unknown>;
     expect((patientCall.data as Record<string, unknown>).appointmentId).toBe('appt-1');
   });
 
   it('triggers Pusher events for both users', async () => {
-    await NotificationService.sendAppointmentBooked(params);
+    await NotificationService.sendBookingRequest(params);
     expect(mockTrigger).toHaveBeenCalledTimes(2);
     expect(mockTrigger).toHaveBeenCalledWith(
       'private-user-patient-1',
@@ -92,6 +93,61 @@ describe('NotificationService.sendAppointmentBooked', () => {
       'notification',
       expect.any(Object)
     );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// sendAppointmentConfirmed
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('NotificationService.sendAppointmentConfirmed', () => {
+  const params = {
+    patientId: 'patient-1',
+    doctorId: 'doctor-1',
+    doctorName: 'Smith',
+    patientName: 'Jane Doe',
+    appointmentId: 'appt-1',
+    scheduledAt: new Date('2026-06-01T09:00:00Z'),
+  };
+
+  it('creates two notifications — one for patient, one for doctor', async () => {
+    await NotificationService.sendAppointmentConfirmed(params);
+    expect(mockNotificationCreate).toHaveBeenCalledTimes(2);
+  });
+
+  it('both notifications have appointment_confirmed type', async () => {
+    mockNotificationCreate.mockResolvedValue(makeNotification({ type: 'appointment_confirmed' }));
+    await NotificationService.sendAppointmentConfirmed(params);
+    for (const call of mockNotificationCreate.mock.calls) {
+      expect((call[0] as Record<string, unknown>).type).toBe('appointment_confirmed');
+    }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// sendAppointmentRejected
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('NotificationService.sendAppointmentRejected', () => {
+  const params = {
+    patientId: 'patient-1',
+    doctorId: 'doctor-1',
+    doctorName: 'Smith',
+    patientName: 'Jane Doe',
+    appointmentId: 'appt-1',
+    scheduledAt: new Date('2026-06-01T09:00:00Z'),
+    reason: 'Schedule conflict',
+  };
+
+  it('creates two notifications', async () => {
+    await NotificationService.sendAppointmentRejected(params);
+    expect(mockNotificationCreate).toHaveBeenCalledTimes(2);
+  });
+
+  it('patient notification includes reason in message', async () => {
+    await NotificationService.sendAppointmentRejected(params);
+    const patientCall = mockNotificationCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(patientCall.message as string).toContain('Schedule conflict');
   });
 });
 
@@ -112,6 +168,7 @@ describe('NotificationService.sendRecordAvailable', () => {
   });
 
   it('sends to patient with record_available type', async () => {
+    mockNotificationCreate.mockResolvedValue(makeNotification({ type: 'record_available' }));
     await NotificationService.sendRecordAvailable(params);
     const call = mockNotificationCreate.mock.calls[0][0] as Record<string, unknown>;
     expect(call.userId).toBe('patient-2');
@@ -157,6 +214,7 @@ describe('NotificationService.sendAppointmentCancelled', () => {
   });
 
   it('both notifications have appointment_cancelled type', async () => {
+    mockNotificationCreate.mockResolvedValue(makeNotification({ type: 'appointment_cancelled' }));
     await NotificationService.sendAppointmentCancelled(params);
     for (const call of mockNotificationCreate.mock.calls) {
       expect((call[0] as Record<string, unknown>).type).toBe('appointment_cancelled');
@@ -171,7 +229,6 @@ describe('NotificationService.sendAppointmentCancelled', () => {
 describe('NotificationService.sendAppointmentReminder', () => {
   const params = {
     userId: 'user-4',
-    recipientName: 'Juan',
     otherName: 'Dr. Lim',
     appointmentId: 'appt-4',
     scheduledAt: new Date('2026-06-03T08:00:00Z'),
@@ -183,11 +240,18 @@ describe('NotificationService.sendAppointmentReminder', () => {
     expect(mockNotificationCreate).toHaveBeenCalledTimes(1);
   });
 
-  it('sends to correct user', async () => {
+  it('sends to correct user with appointment_reminder type', async () => {
+    mockNotificationCreate.mockResolvedValue(makeNotification({ type: 'appointment_reminder' }));
     await NotificationService.sendAppointmentReminder(params);
     const call = mockNotificationCreate.mock.calls[0][0] as Record<string, unknown>;
     expect(call.userId).toBe('user-4');
     expect(call.type).toBe('appointment_reminder');
+  });
+
+  it('includes counterpart name in message', async () => {
+    await NotificationService.sendAppointmentReminder(params);
+    const call = mockNotificationCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(call.message as string).toContain('Dr. Lim');
   });
 });
 
