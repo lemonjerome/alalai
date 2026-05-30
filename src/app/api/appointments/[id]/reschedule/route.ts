@@ -5,11 +5,14 @@ import { withAuth, type AuthenticatedRequest } from '@/lib/api-guard';
 import Appointment from '@/models/Appointment';
 import DoctorProfile from '@/models/DoctorProfile';
 import Availability from '@/models/Availability';
+import User from '@/models/User';
 import { rescheduleAppointmentSchema } from '@/lib/validations/appointment';
 import { getAvailableSlots } from '@/lib/availability-utils';
+import { NotificationService } from '@/lib/notification-service';
 import type { IAppointmentDocument } from '@/models/Appointment';
 import type { IAvailabilityDocument } from '@/models/Availability';
 import type { IDoctorProfileDocument } from '@/models/DoctorProfile';
+import type { IUserDocument } from '@/models/User';
 
 // PATCH /api/appointments/[id]/reschedule — patient only
 export const PATCH = withAuth(
@@ -92,7 +95,13 @@ export const PATCH = withAuth(
       );
     }
 
-    // Create new appointment referencing the old one
+    // Fetch patient and doctor names for the notification
+    const [patientUser, doctorUser] = await Promise.all([
+      User.findById(appointment.patientId).select('name').lean<IUserDocument>(),
+      User.findById(appointment.doctorId).select('name').lean<IUserDocument>(),
+    ]);
+
+    // Create new appointment referencing the old one — status is 'pending' so doctor must re-confirm
     const newApptId = new mongoose.Types.ObjectId();
     const [newAppointment] = await Promise.all([
       Appointment.create({
@@ -102,7 +111,7 @@ export const PATCH = withAuth(
         doctorProfileId: appointment.doctorProfileId,
         scheduledAt: newDate,
         durationMinutes: appointment.durationMinutes,
-        status: 'confirmed',
+        status: 'pending',
         rescheduledFrom: appointment._id,
         jitsiRoomId: `alalai-${newApptId.toString()}`,
       }),
@@ -112,6 +121,16 @@ export const PATCH = withAuth(
         cancellationReason: 'Rescheduled by patient',
       }),
     ]);
+
+    // Notify both parties — doctor's notification asks them to re-confirm
+    NotificationService.sendAppointmentRescheduled({
+      patientId: String(appointment.patientId),
+      doctorId: String(appointment.doctorId),
+      doctorName: doctorUser?.name ?? 'Doctor',
+      patientName: patientUser?.name ?? 'Patient',
+      newAppointmentId: newApptId.toString(),
+      newScheduledAt: newDate,
+    }).catch(() => {/* non-blocking */});
 
     return NextResponse.json({ appointment: newAppointment }, { status: 201 });
   },
