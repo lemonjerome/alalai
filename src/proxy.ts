@@ -30,9 +30,10 @@ export async function proxy(req: NextRequest) {
   }
 
   // Verify JWT cookie (uses jose — Edge-safe, no Node.js APIs)
+  // AUTH_SECRET is the NextAuth v5 canonical name; fall back to NEXTAUTH_SECRET for compatibility
   const token = await getToken({
     req,
-    secret: process.env.NEXTAUTH_SECRET,
+    secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   });
 
   // Unauthenticated → redirect to login
