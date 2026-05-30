@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard,
@@ -18,6 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 const NAV_ITEMS = [
   { href: '/doctor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -35,8 +36,11 @@ function initials(name: string) {
 export function DoctorNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { data: currentUserData } = useCurrentUser();
   const { data: notifData } = useNotifications('new');
+  // session gives name/email quickly; currentUserData gives the fresh profilePictureUrl
   const user = session?.user;
+  const profilePictureUrl = (currentUserData?.user as Record<string, unknown> | undefined)?.profilePictureUrl as string | undefined;
   const unreadCount = notifData?.unreadCount ?? 0;
 
   return (
@@ -86,6 +90,7 @@ export function DoctorNav() {
       <div className="border-t px-3 py-3 space-y-2">
         <div className="flex items-center gap-3 px-2">
           <Avatar className="h-8 w-8">
+            <AvatarImage src={profilePictureUrl} alt={user?.name ?? ''} />
             <AvatarFallback className="text-xs bg-primary/10 text-primary">
               {user?.name ? initials(user.name) : 'DR'}
             </AvatarFallback>
