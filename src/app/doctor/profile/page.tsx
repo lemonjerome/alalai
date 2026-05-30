@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AvailabilityManager } from '@/components/doctors/AvailabilityManager';
+import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { toast } from 'sonner';
 
 const profileSchema = z.object({
@@ -31,7 +32,7 @@ const profileSchema = z.object({
 type ProfileFormValues = z.input<typeof profileSchema>;
 
 interface DoctorProfileData {
-  user: { name: string; email: string; phone?: string; profilePictureUrl?: string };
+  user: { name: string; email: string; phone?: string; profilePictureUrl?: string | null };
   doctorProfile: {
     licenseNumber: string;
     specialization: string[];
@@ -145,6 +146,14 @@ export default function DoctorProfilePage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
         <p className="text-gray-500 mt-1">Update your professional information and availability</p>
+      </div>
+
+      {/* Avatar upload */}
+      <div className="flex justify-center">
+        <AvatarUpload
+          currentUrl={data?.user.profilePictureUrl}
+          name={data?.user.name}
+        />
       </div>
 
       {/* Profile form */}

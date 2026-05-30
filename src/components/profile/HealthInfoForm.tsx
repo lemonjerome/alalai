@@ -231,7 +231,7 @@ export function HealthInfoForm({ defaultValues }: HealthInfoFormProps) {
           )}
         />
 
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" disabled={isPending} className="w-full">
           {isPending ? 'Saving…' : 'Save health info'}
         </Button>
       </form>

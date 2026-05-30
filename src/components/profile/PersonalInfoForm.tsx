@@ -145,7 +145,7 @@ export function PersonalInfoForm({ defaultValues }: PersonalInfoFormProps) {
           )}
         />
 
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" disabled={isPending} className="w-full">
           {isPending ? 'Saving…' : 'Save changes'}
         </Button>
       </form>
