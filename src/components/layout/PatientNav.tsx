@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useNotifications } from '@/hooks/useNotifications';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 const NAV_ITEMS = [
@@ -37,7 +38,9 @@ function initials(name: string) {
 export function PatientNav() {
   const pathname = usePathname();
   const { data } = useCurrentUser();
+  const { data: notifData } = useNotifications('new');
   const user = data?.user as { name?: string; email?: string; profilePictureUrl?: string } | undefined;
+  const unreadCount = notifData?.unreadCount ?? 0;
 
   return (
     <nav className="flex flex-col h-full">
@@ -51,6 +54,7 @@ export function PatientNav() {
       <ul className="flex-1 px-3 py-4 space-y-1">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
+          const isNotifications = href === '/notifications';
           return (
             <li key={href}>
               <Link
@@ -63,7 +67,17 @@ export function PatientNav() {
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                {label}
+                <span className="flex-1">{label}</span>
+                {isNotifications && unreadCount > 0 && (
+                  <span className={cn(
+                    'text-xs font-semibold rounded-full px-1.5 py-0.5 leading-none min-w-[1.25rem] text-center',
+                    active
+                      ? 'bg-white/20 text-white'
+                      : 'bg-primary text-primary-foreground'
+                  )}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </Link>
             </li>
           );

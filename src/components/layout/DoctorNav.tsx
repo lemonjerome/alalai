@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
+import { useNotifications } from '@/hooks/useNotifications';
 
 const NAV_ITEMS = [
   { href: '/doctor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -34,7 +35,9 @@ function initials(name: string) {
 export function DoctorNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { data: notifData } = useNotifications('new');
   const user = session?.user;
+  const unreadCount = notifData?.unreadCount ?? 0;
 
   return (
     <nav className="flex flex-col h-full">
@@ -49,6 +52,7 @@ export function DoctorNav() {
       <ul className="flex-1 px-3 py-4 space-y-1">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
+          const isNotifications = href === '/doctor/notifications';
           return (
             <li key={href}>
               <Link
@@ -61,7 +65,17 @@ export function DoctorNav() {
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                {label}
+                <span className="flex-1">{label}</span>
+                {isNotifications && unreadCount > 0 && (
+                  <span className={cn(
+                    'text-xs font-semibold rounded-full px-1.5 py-0.5 leading-none min-w-[1.25rem] text-center',
+                    active
+                      ? 'bg-white/20 text-white'
+                      : 'bg-primary text-primary-foreground'
+                  )}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </Link>
             </li>
           );
