@@ -20,9 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { updateUserSchema, updatePatientProfileSchema } from '@/lib/validations/user';
+import { updateUserSchema, updatePatientProfileSchema, MARITAL_STATUS_VALUES } from '@/lib/validations/user';
 import { useUpdateUser, useUpdatePatientProfile } from '@/hooks/useCurrentUser';
-import { MARITAL_STATUS_VALUES } from '@/models/PatientProfile';
 
 // Combined schema for the personal info form
 const personalInfoSchema = updateUserSchema.merge(
