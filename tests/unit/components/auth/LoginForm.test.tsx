@@ -71,8 +71,7 @@ describe('LoginForm', () => {
     });
   });
 
-  it('shows error toast on invalid credentials', async () => {
-    const { toast } = require('sonner');
+  it('shows inline error on invalid credentials', async () => {
     mockSignIn.mockResolvedValueOnce({ error: 'CredentialsSignin' });
     render(<LoginForm />);
     const user = userEvent.setup();
@@ -82,7 +81,7 @@ describe('LoginForm', () => {
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/invalid email or password/i));
+      expect(screen.getByText(/invalid email or password/i)).toBeInTheDocument();
     });
   });
 });
