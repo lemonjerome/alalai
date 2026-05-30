@@ -54,7 +54,7 @@ export const NotificationService = {
     appointmentId: string;
     scheduledAt: Date;
   }): Promise<void> {
-    const dateLabel = params.scheduledAt.toLocaleString('en-PH', {
+    const dateLabel = params.scheduledAt.toLocaleString('en-PH', { timeZone: 'Asia/Manila',
       dateStyle: 'medium',
       timeStyle: 'short',
     });
@@ -88,7 +88,7 @@ export const NotificationService = {
     appointmentId: string;
     scheduledAt: Date;
   }): Promise<void> {
-    const dateLabel = params.scheduledAt.toLocaleString('en-PH', {
+    const dateLabel = params.scheduledAt.toLocaleString('en-PH', { timeZone: 'Asia/Manila',
       dateStyle: 'medium',
       timeStyle: 'short',
     });
@@ -123,7 +123,7 @@ export const NotificationService = {
     scheduledAt: Date;
     reason: string;
   }): Promise<void> {
-    const dateLabel = params.scheduledAt.toLocaleString('en-PH', {
+    const dateLabel = params.scheduledAt.toLocaleString('en-PH', { timeZone: 'Asia/Manila',
       dateStyle: 'medium',
       timeStyle: 'short',
     });
@@ -158,7 +158,7 @@ export const NotificationService = {
     cancelledBy: 'patient' | 'doctor';
     reason: string;
   }): Promise<void> {
-    const dateLabel = params.scheduledAt.toLocaleString('en-PH', {
+    const dateLabel = params.scheduledAt.toLocaleString('en-PH', { timeZone: 'Asia/Manila',
       dateStyle: 'medium',
       timeStyle: 'short',
     });
@@ -193,7 +193,7 @@ export const NotificationService = {
     newAppointmentId: string;
     newScheduledAt: Date;
   }): Promise<void> {
-    const dateLabel = params.newScheduledAt.toLocaleString('en-PH', {
+    const dateLabel = params.newScheduledAt.toLocaleString('en-PH', { timeZone: 'Asia/Manila',
       dateStyle: 'medium',
       timeStyle: 'short',
     });
@@ -225,7 +225,7 @@ export const NotificationService = {
     scheduledAt: Date;
     role: 'patient' | 'doctor';
   }): Promise<void> {
-    const timeLabel = params.scheduledAt.toLocaleTimeString('en-PH', {
+    const timeLabel = params.scheduledAt.toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila',
       hour: '2-digit',
       minute: '2-digit',
     });

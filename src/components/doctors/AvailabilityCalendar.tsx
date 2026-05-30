@@ -13,13 +13,28 @@ interface AvailabilityCalendarProps {
   onSelectSlot?: (startISO: string, endISO: string) => void;
 }
 
+/**
+ * Build a YYYY-MM-DD key using the LOCAL date parts of a Date object.
+ *
+ * Why not .toISOString().slice(0, 10)?
+ * Because toISOString() always returns UTC. For a PHT (UTC+8) user,
+ * midnight on June 2 local time = June 1 4pm UTC, so .toISOString()
+ * would give "2026-06-01" — the wrong day. Using .getFullYear() /
+ * .getMonth() / .getDate() reads the local date correctly.
+ */
+function localDateKey(d: Date): string {
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
 function getMonthRange(date: Date): { from: string; to: string } {
+  // Use local date parts so the range matches what the calendar shows
   const from = new Date(date.getFullYear(), date.getMonth(), 1);
-  const to = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-  return {
-    from: from.toISOString().slice(0, 10),
-    to: to.toISOString().slice(0, 10),
-  };
+  const to   = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  return { from: localDateKey(from), to: localDateKey(to) };
 }
 
 export function AvailabilityCalendar({ doctorId, onSelectSlot }: AvailabilityCalendarProps) {
@@ -31,7 +46,7 @@ export function AvailabilityCalendar({ doctorId, onSelectSlot }: AvailabilityCal
   const { from, to } = getMonthRange(month);
   const { data: availability, isLoading } = useDoctorAvailability(doctorId, from, to);
 
-  // Days that have at least one slot
+  // Days that have at least one slot — keyed by LOCAL date string
   const availableDays = useMemo(() => {
     if (!availability) return new Set<string>();
     return new Set(
@@ -41,11 +56,12 @@ export function AvailabilityCalendar({ doctorId, onSelectSlot }: AvailabilityCal
     );
   }, [availability]);
 
-  const selectedDateKey = selectedDate?.toISOString().slice(0, 10);
+  // Use local date key so it matches what the user sees on the calendar
+  const selectedDateKey = selectedDate ? localDateKey(selectedDate) : undefined;
   const slotsForDay = selectedDateKey ? (availability?.[selectedDateKey] ?? []) : [];
 
   const modifiers = {
-    available: (day: Date) => availableDays.has(day.toISOString().slice(0, 10)),
+    available: (day: Date) => availableDays.has(localDateKey(day)),
   };
 
   const modifiersClassNames = {
@@ -65,7 +81,9 @@ export function AvailabilityCalendar({ doctorId, onSelectSlot }: AvailabilityCal
           }}
           month={month}
           onMonthChange={setMonth}
-          disabled={(day) => day < today || !availableDays.has(day.toISOString().slice(0, 10))}
+          disabled={(day) =>
+            day < today || !availableDays.has(localDateKey(day))
+          }
           modifiers={modifiers}
           modifiersClassNames={modifiersClassNames}
           className="rounded-md border w-fit"
@@ -93,6 +111,7 @@ export function AvailabilityCalendar({ doctorId, onSelectSlot }: AvailabilityCal
                 weekday: 'long',
                 month: 'long',
                 day: 'numeric',
+                // No timeZone override — we want the local browser date here
               })}
             </p>
 
@@ -104,6 +123,7 @@ export function AvailabilityCalendar({ doctorId, onSelectSlot }: AvailabilityCal
                   const label = new Date(slot.startISO).toLocaleTimeString('en-PH', {
                     hour: '2-digit',
                     minute: '2-digit',
+                    timeZone: 'Asia/Manila',
                   });
                   const isSelected = selectedSlot === slot.startISO;
                   return (
