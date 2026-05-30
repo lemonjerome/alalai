@@ -1,3 +1,11 @@
+/**
+ * Philippine Time is UTC+8.
+ * Availability times stored as "HH:mm" strings are in PHT.
+ * Pass this constant to getAvailableSlots so "09:00" is treated as
+ * 9:00 AM PHT (= 1:00 AM UTC), not 9:00 AM UTC (= 5:00 PM PHT).
+ */
+export const PH_TZ_OFFSET_MINUTES = 480; // UTC+8
+
 export interface TimeSlot {
   startTime: Date;
   endTime: Date;

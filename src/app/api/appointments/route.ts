@@ -7,7 +7,7 @@ import DoctorProfile from '@/models/DoctorProfile';
 import Availability from '@/models/Availability';
 import User from '@/models/User';
 import { createAppointmentSchema } from '@/lib/validations/appointment';
-import { getAvailableSlots } from '@/lib/availability-utils';
+import { getAvailableSlots, PH_TZ_OFFSET_MINUTES } from '@/lib/availability-utils';
 import { NotificationService } from '@/lib/notification-service';
 import { rateLimit } from '@/lib/rate-limit';
 import type { IDoctorProfileDocument } from '@/models/DoctorProfile';
@@ -122,7 +122,7 @@ export const POST = withAuth(
       status: { $in: ['pending', 'confirmed'] },
     }).lean<IAppointmentDocument[]>();
 
-    const availableSlots = getAvailableSlots(requestedDate, avails, existingAppts);
+    const availableSlots = getAvailableSlots(requestedDate, avails, existingAppts, PH_TZ_OFFSET_MINUTES);
     const requestedISO = requestedDate.toISOString();
     const slotExists = availableSlots.some((s) => s.startISO === requestedISO);
 

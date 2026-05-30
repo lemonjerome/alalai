@@ -7,7 +7,7 @@ import DoctorProfile from '@/models/DoctorProfile';
 import Availability from '@/models/Availability';
 import User from '@/models/User';
 import { rescheduleAppointmentSchema } from '@/lib/validations/appointment';
-import { getAvailableSlots } from '@/lib/availability-utils';
+import { getAvailableSlots, PH_TZ_OFFSET_MINUTES } from '@/lib/availability-utils';
 import { NotificationService } from '@/lib/notification-service';
 import type { IAppointmentDocument } from '@/models/Appointment';
 import type { IAvailabilityDocument } from '@/models/Availability';
@@ -85,7 +85,7 @@ export const PATCH = withAuth(
       _id: { $ne: appointment._id }, // exclude current appointment
     }).lean<IAppointmentDocument[]>();
 
-    const availableSlots = getAvailableSlots(newDate, avails, existingAppts);
+    const availableSlots = getAvailableSlots(newDate, avails, existingAppts, PH_TZ_OFFSET_MINUTES);
     const slotExists = availableSlots.some((s) => s.startISO === newDate.toISOString());
 
     if (!slotExists) {

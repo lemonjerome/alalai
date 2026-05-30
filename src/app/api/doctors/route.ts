@@ -3,7 +3,7 @@ import { connectDB } from '@/lib/db';
 import DoctorProfile from '@/models/DoctorProfile';
 import User from '@/models/User';
 import Availability from '@/models/Availability';
-import { getAvailableSlots } from '@/lib/availability-utils';
+import { getAvailableSlots, PH_TZ_OFFSET_MINUTES } from '@/lib/availability-utils';
 import { sanitizeUser } from '@/lib/utils';
 import type { IDoctorProfileDocument } from '@/models/DoctorProfile';
 
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
           isActive: true,
         }).lean();
 
-        const slots = getAvailableSlots(availabilityDate, avails, []);
+        const slots = getAvailableSlots(availabilityDate, avails, [], PH_TZ_OFFSET_MINUTES);
         nextAvailableSlot = slots[0]?.startISO ?? null;
       }
 

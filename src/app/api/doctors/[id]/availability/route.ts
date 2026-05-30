@@ -4,7 +4,7 @@ import { connectDB } from '@/lib/db';
 import DoctorProfile from '@/models/DoctorProfile';
 import Availability from '@/models/Availability';
 import Appointment from '@/models/Appointment';
-import { getAvailableSlots } from '@/lib/availability-utils';
+import { getAvailableSlots, PH_TZ_OFFSET_MINUTES } from '@/lib/availability-utils';
 import type { IDoctorProfileDocument } from '@/models/DoctorProfile';
 import type { IAvailabilityDocument } from '@/models/Availability';
 import type { IAppointmentDocument } from '@/models/Appointment';
@@ -79,7 +79,7 @@ export async function GET(
 
   while (cursor <= end) {
     const dateKey = cursor.toISOString().slice(0, 10); // YYYY-MM-DD
-    const slots = getAvailableSlots(new Date(cursor), avails, appointments);
+    const slots = getAvailableSlots(new Date(cursor), avails, appointments, PH_TZ_OFFSET_MINUTES);
     result[dateKey] = slots.map((s) => ({ startISO: s.startISO, endISO: s.endISO }));
     cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
