@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { buttonVariants } from '@/components/ui/button';
 import { CancelDialog } from '@/components/appointments/CancelDialog';
-import { Clock, Video, X, CheckCircle2 } from 'lucide-react';
-import { useCancelAppointment, useCompleteAppointment } from '@/hooks/useAppointments';
+import { RescheduleDialog } from '@/components/appointments/RescheduleDialog';
+import { Clock, Video, X, CheckCircle2, CalendarDays } from 'lucide-react';
+import { useCancelAppointment, useCompleteAppointment, useRescheduleAppointment } from '@/hooks/useAppointments';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { AppointmentWithId } from '@/hooks/useAppointments';
@@ -36,12 +37,27 @@ function canJoin(scheduledAt: Date): boolean {
 
 export function AppointmentCard({ appointment, counterpartName, role }: AppointmentCardProps) {
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const cancelMutation = useCancelAppointment();
   const completeMutation = useCompleteAppointment();
+  const rescheduleMutation = useRescheduleAppointment();
 
   const scheduledAt = new Date(appointment.scheduledAt);
   const joinable = canJoin(scheduledAt) && appointment.status === 'confirmed';
   const isActive = ['pending', 'confirmed'].includes(appointment.status);
+
+  const handleReschedule = (scheduledAt: string) => {
+    rescheduleMutation.mutate(
+      { id: String(appointment._id), scheduledAt, durationMinutes: appointment.durationMinutes },
+      {
+        onSuccess: () => {
+          toast.success('Appointment rescheduled');
+          setRescheduleOpen(false);
+        },
+        onError: (err: Error) => toast.error(err.message),
+      }
+    );
+  };
 
   const handleCancel = (reason: string) => {
     cancelMutation.mutate(
@@ -132,6 +148,19 @@ export function AppointmentCard({ appointment, counterpartName, role }: Appointm
                 </Button>
               )}
 
+              {/* Patient: reschedule */}
+              {role === 'patient' && isActive && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1"
+                  onClick={() => setRescheduleOpen(true)}
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  Reschedule
+                </Button>
+              )}
+
               {/* Cancel */}
               {isActive && (
                 <Button
@@ -155,6 +184,18 @@ export function AppointmentCard({ appointment, counterpartName, role }: Appointm
         onConfirm={handleCancel}
         isPending={cancelMutation.isPending}
       />
+
+      {role === 'patient' && (
+        <RescheduleDialog
+          open={rescheduleOpen}
+          onOpenChange={setRescheduleOpen}
+          appointmentId={String(appointment._id)}
+          doctorId={String(appointment.doctorId)}
+          durationMinutes={appointment.durationMinutes}
+          isPending={rescheduleMutation.isPending}
+          onConfirm={handleReschedule}
+        />
+      )}
     </>
   );
 }

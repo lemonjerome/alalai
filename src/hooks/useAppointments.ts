@@ -114,6 +114,30 @@ export function useCancelAppointment() {
   });
 }
 
+// ── Reschedule appointment (patient) ─────────────────────────────────────────
+
+export function useRescheduleAppointment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, scheduledAt, durationMinutes }: { id: string; scheduledAt: string; durationMinutes: number }) => {
+      const res = await fetch(`/api/appointments/${id}/reschedule`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scheduledAt, durationMinutes }),
+      });
+      if (!res.ok) {
+        const err = await res.json() as { error: string };
+        throw new Error(err.error ?? 'Rescheduling failed');
+      }
+      return res.json() as Promise<{ appointment: AppointmentWithId }>;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      void queryClient.invalidateQueries({ queryKey: ['doctorAvailability'] });
+    },
+  });
+}
+
 // ── Complete appointment (doctor) ────────────────────────────────────────────
 
 export function useCompleteAppointment() {

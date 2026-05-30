@@ -1,9 +1,16 @@
+import { redirect } from 'next/navigation';
+import { auth } from '@/lib/auth';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  // Redirect authenticated users straight to their dashboard
+  const session = await auth();
+  if (session?.user?.role === 'patient') redirect('/dashboard');
+  if (session?.user?.role === 'doctor') redirect('/doctor/dashboard');
+
   return (
     <main className="min-h-screen flex flex-col">
       {/* Navigation */}

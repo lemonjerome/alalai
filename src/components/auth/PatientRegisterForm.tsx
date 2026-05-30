@@ -71,7 +71,7 @@ export function PatientRegisterForm() {
       }
 
       toast.success('Welcome to AlalAI!');
-      router.push('/patient/dashboard');
+      router.push('/dashboard');
       router.refresh();
     } catch {
       setFormError('Something went wrong. Please check your connection and try again.');
