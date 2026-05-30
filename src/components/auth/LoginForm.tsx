@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { signIn } from 'next-auth/react';
+import { signIn, getSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
@@ -46,7 +46,13 @@ export function LoginForm() {
       }
 
       toast.success('Welcome back!');
-      router.push('/');
+      // Fetch the freshly-created session to get the role, then redirect to the correct dashboard
+      const session = await getSession();
+      if (session?.user?.role === 'doctor') {
+        router.push('/doctor/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
       router.refresh();
     } catch {
       setFormError('Something went wrong. Please try again later.');

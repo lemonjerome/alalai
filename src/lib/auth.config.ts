@@ -38,7 +38,8 @@ declare module '@auth/core/jwt' {
 export const authConfig: NextAuthConfig = {
   providers: [], // Credentials provider added in auth.ts (Node.js only)
 
-  secret: process.env.NEXTAUTH_SECRET,
+  // NextAuth v5 reads AUTH_SECRET by default; fall back to NEXTAUTH_SECRET for compatibility
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
 
   // Required for local dev (HTTP) and behind proxies (Vercel)
   trustHost: true,
