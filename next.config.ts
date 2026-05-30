@@ -4,6 +4,16 @@ const nextConfig: NextConfig = {
   // Required for the Dockerfile's standalone output (node server.js)
   output: 'standalone',
 
+  // Allow next/image to load profile pictures from Cloudinary
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+      },
+    ],
+  },
+
   // Security headers applied to all routes
   async headers() {
     return [
