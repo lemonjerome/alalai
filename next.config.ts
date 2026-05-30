@@ -4,6 +4,15 @@ const nextConfig: NextConfig = {
   // Required for the Dockerfile's standalone output (node server.js)
   output: 'standalone',
 
+  // Skip tsc and eslint during `next build` — they run in CI (npm run type-check / lint).
+  // This prevents OOM kills in Docker where memory is constrained.
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   // Allow next/image to load profile pictures from Cloudinary
   images: {
     remotePatterns: [
