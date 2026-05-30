@@ -51,12 +51,8 @@ interface AppointmentCardProps {
   role: 'patient' | 'doctor';
 }
 
-/** Returns true if the current time is within ±15 minutes of scheduledAt */
-function canJoin(scheduledAt: Date): boolean {
-  const now = Date.now();
-  const apptTime = scheduledAt.getTime();
-  return Math.abs(now - apptTime) <= 15 * 60 * 1000;
-}
+// No time-gate on the card link — users navigate to the session room to test
+// their camera/mic ahead of time. The join-into-Jitsi gate is on the pre-join screen.
 
 export function AppointmentCard({ appointment, counterpartName, role }: AppointmentCardProps) {
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -71,7 +67,6 @@ export function AppointmentCard({ appointment, counterpartName, role }: Appointm
   const rejectMutation = useRejectAppointment();
 
   const scheduledAt = new Date(appointment.scheduledAt);
-  const joinable = canJoin(scheduledAt) && appointment.status === 'confirmed';
   const isActive = ['pending', 'confirmed'].includes(appointment.status);
 
   const handleReschedule = (scheduledAtISO: string) => {
@@ -195,17 +190,15 @@ export function AppointmentCard({ appointment, counterpartName, role }: Appointm
                 </>
               )}
 
-              {/* Join button */}
+              {/* Join button — navigates to session room for device setup */}
               {appointment.status === 'confirmed' && (
                 <Link
                   href={`/consultation/${String(appointment._id)}`}
                   className={cn(
                     buttonVariants({ variant: 'default', size: 'sm' }),
-                    'gap-1',
-                    !joinable && 'pointer-events-none opacity-50'
+                    'gap-1'
                   )}
-                  aria-disabled={!joinable}
-                  title={joinable ? 'Join session' : 'Available ±15 min from scheduled time'}
+                  title="Go to session room"
                 >
                   <Video className="h-3.5 w-3.5" />
                   Join

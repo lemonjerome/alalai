@@ -1,10 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Video, Clock, Calendar } from 'lucide-react';
+import {
+  Video,
+  VideoOff,
+  Mic,
+  MicOff,
+  Calendar,
+  Clock,
+  User,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface PreJoinScreenProps {
   patientName: string;
@@ -15,11 +28,215 @@ interface PreJoinScreenProps {
   onJoin: () => void;
 }
 
-function initials(name: string) {
-  return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+// ── Camera Preview ────────────────────────────────────────────────────────────
+
+function CameraPreview() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [cameraOn, setCameraOn] = useState(false);
+  const [denied, setDenied] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const stopCamera = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setCameraOn(false);
+  }, []);
+
+  const startCamera = useCallback(async () => {
+    setLoading(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setCameraOn(true);
+      setDenied(false);
+    } catch {
+      setDenied(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void startCamera();
+    return () => stopCamera();
+  }, [startCamera, stopCamera]);
+
+  return (
+    <div className="relative bg-gray-900 rounded-xl overflow-hidden aspect-video w-full">
+      {/* Video element always in DOM — shows when camera is on */}
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        playsInline
+        className={cn(
+          'w-full h-full object-cover',
+          '[transform:scaleX(-1)]', // mirror
+          !cameraOn && 'hidden'
+        )}
+      />
+
+      {/* Placeholder when camera is off */}
+      {!cameraOn && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 gap-2">
+          {loading ? (
+            <p className="text-sm">Starting camera…</p>
+          ) : denied ? (
+            <>
+              <VideoOff className="h-10 w-10 text-gray-600" />
+              <p className="text-sm text-gray-400">Camera access denied</p>
+              <p className="text-xs text-gray-500">Allow camera in your browser settings</p>
+            </>
+          ) : (
+            <>
+              <User className="h-10 w-10 text-gray-600" />
+              <p className="text-sm text-gray-400">Camera is off</p>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Camera toggle button */}
+      {!denied && !loading && (
+        <button
+          type="button"
+          onClick={cameraOn ? stopCamera : () => void startCamera()}
+          className="absolute bottom-3 right-3 p-2 bg-black/60 rounded-full text-white hover:bg-black/80 transition-colors"
+          title={cameraOn ? 'Turn camera off' : 'Turn camera on'}
+        >
+          {cameraOn ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
+        </button>
+      )}
+
+      {/* "Your camera" label */}
+      <div className="absolute top-3 left-3 px-2 py-0.5 bg-black/50 rounded text-xs text-white/80">
+        Your camera
+      </div>
+    </div>
+  );
 }
 
-function Countdown({ scheduledAt }: { scheduledAt: Date }) {
+// ── Mic Test ──────────────────────────────────────────────────────────────────
+
+const MIC_BAR_COUNT = 12;
+
+function MicTest() {
+  const [testing, setTesting] = useState(false);
+  const [level, setLevel] = useState(0);
+  const [denied, setDenied] = useState(false);
+  const streamRef = useRef<MediaStream | null>(null);
+  const animFrameRef = useRef<number | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const stopMic = useCallback(() => {
+    if (animFrameRef.current !== null) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    void audioCtxRef.current?.close();
+    audioCtxRef.current = null;
+    setLevel(0);
+    setTesting(false);
+  }, []);
+
+  const startMic = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      const audioCtx = new AudioContext();
+      audioCtxRef.current = audioCtx;
+
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+
+      const data = new Uint8Array(analyser.frequencyBinCount);
+
+      const tick = () => {
+        analyser.getByteFrequencyData(data);
+        const avg = data.reduce((a, b) => a + b, 0) / data.length;
+        setLevel(Math.min(100, (avg / 80) * 100));
+        animFrameRef.current = requestAnimationFrame(tick);
+      };
+
+      animFrameRef.current = requestAnimationFrame(tick);
+      setTesting(true);
+      setDenied(false);
+    } catch {
+      setDenied(true);
+    }
+  }, []);
+
+  useEffect(() => () => stopMic(), [stopMic]);
+
+  const isWorking = testing && level > 5;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-gray-800">Microphone Test</span>
+        <Button
+          size="sm"
+          variant={testing ? 'secondary' : 'outline'}
+          className="gap-1.5 h-7 text-xs"
+          onClick={testing ? stopMic : () => void startMic()}
+          disabled={denied}
+        >
+          {testing ? <MicOff className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
+          {denied ? 'Mic denied' : testing ? 'Stop' : 'Test Mic'}
+        </Button>
+      </div>
+
+      {/* Level bars */}
+      <div className="flex gap-[3px] items-end h-7 px-0.5">
+        {Array.from({ length: MIC_BAR_COUNT }, (_, i) => {
+          const threshold = ((i + 1) / MIC_BAR_COUNT) * 100;
+          const active = testing && level >= threshold;
+          const heightPct = 30 + (i / (MIC_BAR_COUNT - 1)) * 70;
+          return (
+            <div
+              key={i}
+              className={cn(
+                'flex-1 rounded-sm transition-all duration-75',
+                active
+                  ? i < 7
+                    ? 'bg-green-500'
+                    : i < 10
+                    ? 'bg-yellow-400'
+                    : 'bg-red-500'
+                  : 'bg-gray-200'
+              )}
+              style={{ height: `${heightPct}%` }}
+            />
+          );
+        })}
+      </div>
+
+      <p className="text-xs text-gray-400 h-4">
+        {denied
+          ? 'Allow microphone access in your browser settings'
+          : isWorking
+          ? '✓ Microphone is working'
+          : testing
+          ? 'Speak into your microphone…'
+          : 'Click "Test Mic" to check your audio'}
+      </p>
+    </div>
+  );
+}
+
+// ── Countdown ─────────────────────────────────────────────────────────────────
+
+function useCountdown(scheduledAt: Date) {
   const [diff, setDiff] = useState(() => scheduledAt.getTime() - Date.now());
 
   useEffect(() => {
@@ -29,114 +246,108 @@ function Countdown({ scheduledAt }: { scheduledAt: Date }) {
     return () => clearInterval(interval);
   }, [scheduledAt]);
 
-  if (diff <= 0) return null;
-
-  const totalSeconds = Math.floor(diff / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  if (hours >= 1) {
-    return (
-      <p className="text-sm text-gray-500 text-center">
-        Consultation starts in{' '}
-        <strong>
-          {hours}h {minutes}m
-        </strong>
-      </p>
-    );
-  }
-
-  return (
-    <p className="text-sm text-amber-600 text-center font-medium">
-      Starting in {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
-    </p>
-  );
+  return diff;
 }
+
+// ── PreJoinScreen ─────────────────────────────────────────────────────────────
 
 export function PreJoinScreen({
   patientName,
   doctorName,
   scheduledAt,
   durationMinutes,
-  role: _role,
+  role,
   onJoin,
 }: PreJoinScreenProps) {
-  // Use useState so the join window is computed once on mount (not re-evaluated during re-renders)
-  const [now] = useState(() => Date.now());
-  const apptTime = scheduledAt.getTime();
-  const isWithinWindow = Math.abs(now - apptTime) <= 15 * 60 * 1000;
-  const isTooEarly = now < apptTime - 15 * 60 * 1000;
+  const diff = useCountdown(scheduledAt);
+  const canJoin = diff <= 0; // only at or after exact scheduled time
+
+  const totalSeconds = Math.max(0, Math.floor(diff / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  const counterpartName = role === 'patient' ? `Dr. ${doctorName}` : patientName;
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
-      <Card className="w-full max-w-md">
-        <CardContent className="pt-8 pb-8 space-y-6">
-          {/* Participant avatars */}
-          <div className="flex justify-center items-center gap-4">
-            <div className="text-center">
-              <Avatar className="h-16 w-16 mx-auto">
-                <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">
-                  {initials(patientName)}
-                </AvatarFallback>
-              </Avatar>
-              <p className="text-xs text-gray-500 mt-1">{patientName}</p>
-            </div>
-            <span className="text-2xl text-gray-300">↔</span>
-            <div className="text-center">
-              <Avatar className="h-16 w-16 mx-auto">
-                <AvatarFallback className="bg-teal-100 text-teal-700 font-bold text-lg">
-                  {initials(doctorName)}
-                </AvatarFallback>
-              </Avatar>
-              <p className="text-xs text-gray-500 mt-1">Dr. {doctorName}</p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4 py-8">
+      <Card className="w-full max-w-md shadow-2xl border-gray-200">
+        <CardContent className="pt-6 pb-8 space-y-5">
 
-          <div className="text-center">
-            <h2 className="text-xl font-bold text-gray-900">Consultation Room</h2>
-            <div className="flex items-center justify-center gap-4 mt-2 text-sm text-gray-500">
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5" />
-                {scheduledAt.toLocaleDateString('en-PH', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                {scheduledAt.toLocaleTimeString('en-PH', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-                {' · '}
-                {durationMinutes} min
-              </span>
-            </div>
-          </div>
-
-          {isTooEarly && <Countdown scheduledAt={scheduledAt} />}
-
-          {!isWithinWindow && !isTooEarly && (
-            <p className="text-sm text-gray-500 text-center">
-              This consultation has already ended.
+          {/* Header */}
+          <div className="text-center space-y-1">
+            <h1 className="text-xl font-bold text-gray-900">
+              {role === 'patient'
+                ? `Dr. ${doctorName}'s Session Room`
+                : `Session with ${patientName}`}
+            </h1>
+            <p className="text-sm text-gray-500">
+              with {counterpartName}
             </p>
-          )}
+          </div>
 
+          {/* Appointment info chips */}
+          <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
+            <span className="flex items-center gap-1">
+              <Calendar className="h-3.5 w-3.5" />
+              {scheduledAt.toLocaleDateString('en-PH', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
+              {scheduledAt.toLocaleTimeString('en-PH', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}{' '}
+              · {durationMinutes} min
+            </span>
+          </div>
+
+          {/* Camera preview */}
+          <CameraPreview />
+
+          {/* Mic test */}
+          <div className="bg-gray-50 rounded-xl px-4 py-3 space-y-2">
+            <MicTest />
+          </div>
+
+          {/* Countdown / ready indicator */}
+          <div className="text-center">
+            {!canJoin ? (
+              <div className="space-y-1">
+                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+                  Session starts in
+                </p>
+                <p className="text-3xl font-mono font-bold text-gray-900 tabular-nums">
+                  {hours > 0
+                    ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+                    : `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm font-medium text-green-600">
+                ✓ Session is ready — you can join now
+              </p>
+            )}
+          </div>
+
+          {/* Join button */}
           <Button
             className="w-full gap-2"
             size="lg"
             onClick={onJoin}
-            disabled={!isWithinWindow}
+            disabled={!canJoin}
           >
             <Video className="h-5 w-5" />
-            {isWithinWindow ? 'Join Consultation' : 'Session Not Active'}
+            {canJoin ? 'Join Session' : 'Waiting for session time…'}
           </Button>
 
-          {isTooEarly && (
-            <p className="text-xs text-gray-400 text-center">
-              The Join button activates 15 minutes before your scheduled time.
+          {!canJoin && (
+            <p className="text-xs text-gray-400 text-center -mt-2">
+              Use the camera and mic above to get ready. The button unlocks at your scheduled time.
             </p>
           )}
         </CardContent>
