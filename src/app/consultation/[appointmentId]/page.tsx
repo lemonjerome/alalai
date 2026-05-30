@@ -42,10 +42,6 @@ export default async function ConsultationPage({ params }: PageProps) {
     redirect(isDoctor ? '/doctor/dashboard' : '/dashboard');
   }
 
-  if (appointment.status === 'cancelled') {
-    redirect(isDoctor ? '/doctor/appointments' : '/appointments');
-  }
-
   const [patientUser, doctorUser] = await Promise.all([
     User.findById(appointment.patientId).select('name').lean<IUserDocument>(),
     User.findById(appointment.doctorId).select('name').lean<IUserDocument>(),
@@ -61,6 +57,8 @@ export default async function ConsultationPage({ params }: PageProps) {
       doctorName={sanitizeUser(doctorUser!)?.name ?? 'Doctor'}
       role={isDoctor ? 'doctor' : 'patient'}
       currentUserName={session.user.name ?? (isDoctor ? `Dr. ${doctorUser?.name}` : patientUser?.name ?? 'User')}
+      doctorProfileId={String(appointment.doctorProfileId)}
+      appointmentStatus={appointment.status}
     />
   );
 }

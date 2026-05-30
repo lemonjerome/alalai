@@ -147,26 +147,31 @@ export default async function DoctorDashboardPage() {
                 const patient = patientMap.get(String(appt.patientId));
                 const scheduledDate = new Date(appt.scheduledAt);
                 return (
-                  <li key={String(appt._id)} className="py-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {patient?.name ?? 'Unknown Patient'}
-                      </p>
-                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                        <Clock className="h-3 w-3" />
-                        {scheduledDate.toLocaleTimeString('en-PH', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                        {' · '}
-                        {appt.durationMinutes} min
-                      </p>
-                    </div>
-                    <Badge
-                      className={`text-xs ${STATUS_COLORS[appt.status] ?? 'bg-gray-100 text-gray-700'}`}
+                  <li key={String(appt._id)}>
+                    <Link
+                      href={`/consultation/${String(appt._id)}`}
+                      className="py-3 flex items-center justify-between hover:bg-gray-50 -mx-2 px-2 rounded-lg transition-colors"
                     >
-                      {appt.status}
-                    </Badge>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {patient?.name ?? 'Unknown Patient'}
+                        </p>
+                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                          <Clock className="h-3 w-3" />
+                          {scheduledDate.toLocaleTimeString('en-PH', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                          {' · '}
+                          {appt.durationMinutes} min
+                        </p>
+                      </div>
+                      <Badge
+                        className={`text-xs ${STATUS_COLORS[appt.status] ?? 'bg-gray-100 text-gray-700'}`}
+                      >
+                        {appt.status}
+                      </Badge>
+                    </Link>
                   </li>
                 );
               })}

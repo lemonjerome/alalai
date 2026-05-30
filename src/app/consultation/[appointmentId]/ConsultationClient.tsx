@@ -13,9 +13,12 @@ interface ConsultationClientProps {
   doctorName: string;
   role: 'patient' | 'doctor';
   currentUserName: string;
+  doctorProfileId: string;
+  appointmentStatus: string;
 }
 
 export function ConsultationClient({
+  appointmentId,
   jitsiRoomId,
   scheduledAt,
   durationMinutes,
@@ -23,6 +26,8 @@ export function ConsultationClient({
   doctorName,
   role,
   currentUserName,
+  doctorProfileId,
+  appointmentStatus,
 }: ConsultationClientProps) {
   const [joined, setJoined] = useState(false);
   const scheduledAtDate = new Date(scheduledAt);
@@ -30,6 +35,9 @@ export function ConsultationClient({
   if (!joined) {
     return (
       <PreJoinScreen
+        appointmentId={appointmentId}
+        doctorProfileId={doctorProfileId}
+        appointmentStatus={appointmentStatus}
         patientName={patientName}
         doctorName={doctorName}
         scheduledAt={scheduledAtDate}

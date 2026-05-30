@@ -6,6 +6,7 @@ import {
   useRef,
   useCallback,
 } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -16,10 +17,19 @@ import {
   Calendar,
   Clock,
   User,
+  CalendarDays,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { CancelDialog } from '@/components/appointments/CancelDialog';
+import { RescheduleDialog } from '@/components/appointments/RescheduleDialog';
+import { useCancelAppointment, useRescheduleAppointment } from '@/hooks/useAppointments';
 
 interface PreJoinScreenProps {
+  appointmentId: string;
+  doctorProfileId: string;
+  appointmentStatus: string;
   patientName: string;
   doctorName: string;
   scheduledAt: Date;
@@ -68,20 +78,17 @@ function CameraPreview() {
 
   return (
     <div className="relative bg-gray-900 rounded-xl overflow-hidden aspect-video w-full">
-      {/* Video element always in DOM — shows when camera is on */}
       <video
         ref={videoRef}
         autoPlay
         muted
         playsInline
         className={cn(
-          'w-full h-full object-cover',
-          '[transform:scaleX(-1)]', // mirror
+          'w-full h-full object-cover [transform:scaleX(-1)]',
           !cameraOn && 'hidden'
         )}
       />
 
-      {/* Placeholder when camera is off */}
       {!cameraOn && (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 gap-2">
           {loading ? (
@@ -101,7 +108,6 @@ function CameraPreview() {
         </div>
       )}
 
-      {/* Camera toggle button */}
       {!denied && !loading && (
         <button
           type="button"
@@ -113,7 +119,6 @@ function CameraPreview() {
         </button>
       )}
 
-      {/* "Your camera" label */}
       <div className="absolute top-3 left-3 px-2 py-0.5 bg-black/50 rounded text-xs text-white/80">
         Your camera
       </div>
@@ -196,7 +201,6 @@ function MicTest() {
         </Button>
       </div>
 
-      {/* Level bars */}
       <div className="flex gap-[3px] items-end h-7 px-0.5">
         {Array.from({ length: MIC_BAR_COUNT }, (_, i) => {
           const threshold = ((i + 1) / MIC_BAR_COUNT) * 100;
@@ -252,6 +256,9 @@ function useCountdown(scheduledAt: Date) {
 // ── PreJoinScreen ─────────────────────────────────────────────────────────────
 
 export function PreJoinScreen({
+  appointmentId,
+  doctorProfileId,
+  appointmentStatus,
   patientName,
   doctorName,
   scheduledAt,
@@ -259,8 +266,15 @@ export function PreJoinScreen({
   role,
   onJoin,
 }: PreJoinScreenProps) {
+  const router = useRouter();
   const diff = useCountdown(scheduledAt);
-  const canJoin = diff <= 0; // only at or after exact scheduled time
+  const canJoin = diff <= 0 && appointmentStatus === 'confirmed';
+
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+
+  const cancelMutation = useCancelAppointment();
+  const rescheduleMutation = useRescheduleAppointment();
 
   const totalSeconds = Math.max(0, Math.floor(diff / 1000));
   const hours = Math.floor(totalSeconds / 3600);
@@ -268,90 +282,191 @@ export function PreJoinScreen({
   const seconds = totalSeconds % 60;
 
   const counterpartName = role === 'patient' ? `Dr. ${doctorName}` : patientName;
+  const isActive = ['pending', 'confirmed'].includes(appointmentStatus);
+  const backHref = role === 'patient' ? '/appointments' : '/doctor/appointments';
+
+  const handleCancel = (reason: string) => {
+    cancelMutation.mutate(
+      { id: appointmentId, reason },
+      {
+        onSuccess: () => {
+          toast.success('Appointment cancelled');
+          router.push(backHref);
+        },
+        onError: (err: Error) => toast.error(err.message),
+      }
+    );
+  };
+
+  const handleReschedule = (scheduledAtISO: string) => {
+    rescheduleMutation.mutate(
+      { id: appointmentId, scheduledAt: scheduledAtISO, durationMinutes },
+      {
+        onSuccess: () => {
+          toast.success('Appointment rescheduled');
+          setRescheduleOpen(false);
+          router.push(backHref);
+        },
+        onError: (err: Error) => toast.error(err.message),
+      }
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4 py-8">
-      <Card className="w-full max-w-md shadow-2xl border-gray-200">
-        <CardContent className="pt-6 pb-8 space-y-5">
+    <>
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4 py-8">
+        <Card className="w-full max-w-md shadow-2xl border-gray-200">
+          <CardContent className="pt-6 pb-8 space-y-5">
 
-          {/* Header */}
-          <div className="text-center space-y-1">
-            <h1 className="text-xl font-bold text-gray-900">
-              {role === 'patient'
-                ? `Dr. ${doctorName}'s Session Room`
-                : `Session with ${patientName}`}
-            </h1>
-            <p className="text-sm text-gray-500">
-              with {counterpartName}
-            </p>
-          </div>
+            {/* Header */}
+            <div className="text-center space-y-1">
+              <h1 className="text-xl font-bold text-gray-900">
+                {role === 'patient'
+                  ? `Dr. ${doctorName}'s Session Room`
+                  : `Session with ${patientName}`}
+              </h1>
+              <p className="text-sm text-gray-500">with {counterpartName}</p>
+            </div>
 
-          {/* Appointment info chips */}
-          <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5" />
-              {scheduledAt.toLocaleDateString('en-PH', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </span>
-            <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
-              {scheduledAt.toLocaleTimeString('en-PH', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}{' '}
-              · {durationMinutes} min
-            </span>
-          </div>
+            {/* Appointment info chips */}
+            <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5" />
+                {scheduledAt.toLocaleDateString('en-PH', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" />
+                {scheduledAt.toLocaleTimeString('en-PH', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}{' '}
+                · {durationMinutes} min
+              </span>
+            </div>
 
-          {/* Camera preview */}
-          <CameraPreview />
-
-          {/* Mic test */}
-          <div className="bg-gray-50 rounded-xl px-4 py-3 space-y-2">
-            <MicTest />
-          </div>
-
-          {/* Countdown / ready indicator */}
-          <div className="text-center">
-            {!canJoin ? (
-              <div className="space-y-1">
-                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
-                  Session starts in
-                </p>
-                <p className="text-3xl font-mono font-bold text-gray-900 tabular-nums">
-                  {hours > 0
-                    ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
-                    : `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`}
-                </p>
+            {/* Status banner for non-confirmed appointments */}
+            {appointmentStatus === 'cancelled' && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 text-center">
+                This appointment has been cancelled.
               </div>
-            ) : (
-              <p className="text-sm font-medium text-green-600">
-                ✓ Session is ready — you can join now
+            )}
+            {appointmentStatus === 'pending' && (
+              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded-lg px-4 py-3 text-center">
+                Waiting for the doctor to confirm this appointment.
+              </div>
+            )}
+            {appointmentStatus === 'completed' && (
+              <div className="bg-gray-50 border border-gray-200 text-gray-600 text-sm rounded-lg px-4 py-3 text-center">
+                This consultation has already been completed.
+              </div>
+            )}
+
+            {/* Camera preview — always show so users can test setup */}
+            <CameraPreview />
+
+            {/* Mic test */}
+            <div className="bg-gray-50 rounded-xl px-4 py-3 space-y-2">
+              <MicTest />
+            </div>
+
+            {/* Countdown / ready indicator */}
+            {appointmentStatus === 'confirmed' && (
+              <div className="text-center">
+                {!canJoin ? (
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+                      Session starts in
+                    </p>
+                    <p className="text-3xl font-mono font-bold text-gray-900 tabular-nums">
+                      {hours > 0
+                        ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+                        : `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm font-medium text-green-600">
+                    ✓ Session is ready — you can join now
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Join button */}
+            <Button
+              className="w-full gap-2"
+              size="lg"
+              onClick={onJoin}
+              disabled={!canJoin}
+            >
+              <Video className="h-5 w-5" />
+              {canJoin
+                ? 'Join Session'
+                : appointmentStatus === 'confirmed'
+                ? 'Waiting for session time…'
+                : 'Session not available'}
+            </Button>
+
+            {appointmentStatus === 'confirmed' && !canJoin && (
+              <p className="text-xs text-gray-400 text-center -mt-2">
+                Use the camera and mic above to get ready. The button unlocks at your scheduled time.
               </p>
             )}
-          </div>
 
-          {/* Join button */}
-          <Button
-            className="w-full gap-2"
-            size="lg"
-            onClick={onJoin}
-            disabled={!canJoin}
-          >
-            <Video className="h-5 w-5" />
-            {canJoin ? 'Join Session' : 'Waiting for session time…'}
-          </Button>
+            {/* Cancel / Reschedule actions */}
+            {isActive && (
+              <div className="flex gap-2 pt-1">
+                {role === 'patient' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 gap-1.5"
+                    onClick={() => setRescheduleOpen(true)}
+                  >
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    Reschedule
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/5',
+                    role === 'patient' ? 'flex-1' : 'w-full'
+                  )}
+                  onClick={() => setCancelOpen(true)}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Cancel Appointment
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-          {!canJoin && (
-            <p className="text-xs text-gray-400 text-center -mt-2">
-              Use the camera and mic above to get ready. The button unlocks at your scheduled time.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+      {/* Confirmation modals */}
+      <CancelDialog
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        onConfirm={handleCancel}
+        isPending={cancelMutation.isPending}
+      />
+
+      {role === 'patient' && (
+        <RescheduleDialog
+          open={rescheduleOpen}
+          onOpenChange={setRescheduleOpen}
+          appointmentId={appointmentId}
+          doctorProfileId={doctorProfileId}
+          durationMinutes={durationMinutes}
+          isPending={rescheduleMutation.isPending}
+          onConfirm={handleReschedule}
+        />
+      )}
+    </>
   );
 }
