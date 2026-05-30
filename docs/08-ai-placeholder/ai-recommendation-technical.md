@@ -1,100 +1,201 @@
 # AI Doctor Recommendation — Technical Documentation
 
-## Architecture
+## Architecture Overview
 
 ```
-src/app/(patient)/doctors/recommend/
-└── page.tsx               — Client Component: symptom picker page
-src/components/doctors/
-└── SymptomChecker.tsx     — Client Component: symptom selection UI + result display
+Patient Browser
+     │
+     │  POST /api/recommend-doctor  { symptoms }
+     ▼
+Next.js API Route (Node.js runtime)
+     │
+     ├─► Ollama Cloud API  (gemma4 model)
+     │     └─ Returns JSON { specialization, reasoning }
+     │
+     └─► MongoDB Atlas
+           └─ DoctorProfile.find({ specialization, isAcceptingPatients: true })
+               joined with User.find({ _id: $in userIds })
+               └─ Returns RecommendedDoctor[]
+     │
+     └─► Response { specialization, reasoning, doctors[] }
 ```
-
-No API route is required for the static implementation. The symptom-to-specialization mapping is a plain `Record<string, string[]>` in the component module.
 
 ---
 
-## Static Mapping (`SymptomChecker.tsx`)
+## API Endpoint
 
-```ts
-const SYMPTOM_MAP: Record<string, string[]> = {
-  'chest pain': ['Cardiology', 'Internal Medicine'],
-  'heart palpitations': ['Cardiology'],
-  'shortness of breath': ['Pulmonology', 'Cardiology'],
-  // ... 25 more entries
-};
+| | |
+|---|---|
+| **Route** | `POST /api/recommend-doctor` |
+| **Auth** | Required — patient role only (`withAuth({ roles: ['patient'] })`) |
+| **File** | `src/app/api/recommend-doctor/route.ts` |
+
+### Request body
+```json
+{ "symptoms": "string (10–1000 chars)" }
 ```
 
-When the user clicks "Get Recommendation":
-1. Iterate over all selected symptoms
-2. For each symptom, look up `SYMPTOM_MAP[symptom]`
-3. Accumulate all specializations into a `Set<string>` (deduplicated)
-4. Sort alphabetically
-5. Display as badges; link to `/doctors?specialization={results[0]}`
-
-The first specialization in the result array is used for the "Browse doctors" CTA link because it's the one deemed most specific by the mapping order.
-
----
-
-## `SymptomChecker` Component
-
-**Props**:
-```ts
-interface SymptomCheckerProps {
-  onSpecializations?: (specs: string[]) => void; // callback for parent state
+### Response (200)
+```json
+{
+  "specialization": "Cardiology",
+  "reasoning": "Your chest pain and shortness of breath suggest a cardiac issue...",
+  "doctors": [
+    {
+      "_id": "...",
+      "name": "Maria Santos",
+      "profilePictureUrl": "...",
+      "doctorProfileId": "...",
+      "specialization": ["Cardiology"],
+      "bio": "...",
+      "yearsOfExperience": 16,
+      "consultationFee": 1200,
+      "rating": 4.9,
+      "reviewCount": 87,
+      "isVerified": true
+    }
+  ]
 }
 ```
 
-**State**:
-- `selected: Set<string>` — currently checked symptoms
-- `results: string[] | null` — null = not yet searched; array = results shown
-
-**Key behavior**: clicking a symptom clears `results` (forces a new search after changing selection).
-
-**Link generation**:
-```ts
-href={`/doctors?specialization=${encodeURIComponent(results[0])}`}
-```
-This links to the doctor discovery page with the specialization filter pre-applied via URL search params (consistent with the rest of the filter state architecture).
+### Error responses
+| Status | Reason |
+|---|---|
+| 400 | Symptoms failed Zod validation |
+| 401 | Not authenticated |
+| 403 | Wrong role (doctor trying to access) |
+| 503 | `OLLAMA_KEY` not configured |
 
 ---
 
-## Future Ollama Integration Point
+## Ollama Integration
 
-The planned AI endpoint would replace the static mapping with a call to a local Ollama instance:
+### Model
+- **Provider**: Ollama Cloud (`https://api.ollama.com`)
+- **Model**: `gemma4`
+- **Endpoint**: `POST /v1/chat/completions` (OpenAI-compatible)
+- **Auth**: `Authorization: Bearer ${OLLAMA_KEY}`
+- **Temperature**: `0.2` (low — keeps answers deterministic and structured)
+- **Timeout**: 30 seconds (`AbortSignal.timeout(30_000)`)
 
-```ts
-// /api/ai/recommend — POST (future)
-const response = await fetch('http://localhost:11434/api/generate', {
-  method: 'POST',
-  body: JSON.stringify({
-    model: 'llama3',
-    prompt: `Patient symptoms: "${symptoms}". Suggest appropriate medical specializations. Reply with a JSON array of specialization strings only.`,
-    stream: false,
-  }),
-});
+### System prompt strategy
+The system prompt instructs the model to:
+1. Act as a medical triage router (not a diagnostician)
+2. Output **only** a JSON object — no markdown fences, no explanations outside JSON
+3. Restrict `specialization` to the exact 5 strings in `SUPPORTED_SPECIALIZATIONS`
+4. Write empathetic, non-alarming reasoning
+
+### JSON robustness
+The raw model output is cleaned before parsing:
+- Code fences (` ```json ... ``` `) are stripped with regex
+- `JSON.parse()` is attempted on the cleaned string
+- The result is validated with `ollamaResponseSchema` (Zod)
+- If validation fails, the code scans for any known specialization string in the raw output (fallback)
+- If everything fails, defaults to `"General Practitioner"` with a safe fallback message
+
+This means the endpoint **never returns a 500** due to an unexpected AI response.
+
+---
+
+## Zod Schemas
+
+**File**: `src/lib/validations/recommend.ts`
+
+| Schema | Purpose |
+|---|---|
+| `recommendRequestSchema` | Validates incoming POST body (`symptoms` 10–1000 chars, trimmed) |
+| `ollamaResponseSchema` | Validates the JSON produced by the LLM |
+| `SUPPORTED_SPECIALIZATIONS` | Const tuple — single source of truth for the 5 valid values |
+| `RecommendedDoctor` | Plain TS interface for API response shape |
+| `RecommendResponse` | Full API response shape |
+
+---
+
+## Frontend
+
+### Hook: `useRecommendDoctor`
+**File**: `src/hooks/useRecommendDoctor.ts`
+
+Uses TanStack Query `useMutation`. States exposed:
+- `isPending` — triggers loading skeleton
+- `isSuccess` + `data` — triggers result display
+- `isError` + `error.message` — triggers inline Alert
+- `reset()` — clears results, resets form state
+
+### Component: `SymptomChecker`
+**File**: `src/components/doctors/SymptomChecker.tsx`
+
+State machine driven by mutation status:
+
+```
+idle → [user types + submits] → pending → success | error
+                                              ↓
+                                         [reset()] → idle
 ```
 
-The `SymptomChecker` page is architected to accept this — the `/doctors/recommend` page only renders `SymptomChecker` as a child. Replacing the static component with an `OllamaChecker` component that calls `/api/ai/recommend` would be a drop-in swap.
+| State | UI shown |
+|---|---|
+| `idle` | Textarea + submit button |
+| `pending` | Skeleton: thinking indicator + 3 skeleton doctor cards |
+| `success` | AI reasoning card (sky gradient) + doctor list |
+| `error` | Destructive Alert with error message |
 
-**Why Ollama?**
-- **Local LLM**: No API costs, no data sent to external AI services
-- **Privacy-friendly**: Patient symptom data stays on the server
-- **Self-hosted**: Works without internet connectivity once the model is pulled
-- **Flexible**: Any Ollama-compatible model can be used (llama3, mistral, etc.)
+### Page: `DoctorRecommendPage`
+**File**: `src/app/(patient)/doctors/recommend/page.tsx`
+
+Server Component — adds `metadata` for SEO, renders `SymptomChecker` inside a card container. Medical disclaimer at the bottom.
+
+---
+
+## Data Flow (MongoDB query)
+
+```ts
+// 1. Find profiles matching specialization
+const profiles = await DoctorProfile.find({
+  specialization: specialization,   // exact match in array
+  isAcceptingPatients: true,
+}).limit(6).lean();
+
+// 2. Batch fetch user display info
+const users = await User.find({ _id: { $in: userIds } })
+  .select('name profilePictureUrl')
+  .lean();
+
+// 3. Join in application layer (Map by _id)
+```
+
+Max 6 doctors returned per recommendation. The `isAcceptingPatients: true` filter ensures patients only see available doctors.
+
+---
+
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `OLLAMA_KEY` | Yes | Ollama Cloud API key |
+
+Add to `.env.local` and Vercel project settings. Never commit the real value.
+
+---
+
+## Tests
+
+**File**: `tests/unit/lib/recommend.test.ts`
+
+| Test | What it checks |
+|---|---|
+| `recommendRequestSchema` | Accepts ≥10 chars, rejects <10, rejects >1000, trims whitespace |
+| `ollamaResponseSchema` | All 5 valid specializations pass, unknown strings fail, missing reasoning fails |
+| `SUPPORTED_SPECIALIZATIONS` | Exactly 5 entries, correct values present |
+
+Run: `npm run test:unit`
 
 ---
 
 ## Security Notes
 
-- The symptom checker page at `/doctors/recommend` is inside the `(patient)` route group and protected by the `DoctorLayout`'s session check (patients only)
-- The middleware enforces that only authenticated users can access any `/doctors/...` page
-- No PII is stored when a patient uses the symptom checker — it's purely client-side computation
-
----
-
-## Known Limitations
-
-- The static mapping is a rough approximation — a symptom like "fatigue" appears under many specializations (Endocrinology + Internal Medicine) and a real AI would give a more nuanced result
-- Only 26 common symptoms are mapped — uncommon or highly specific symptoms won't have a mapping and will return an empty result (user is guided to Internal Medicine)
-- The tool doesn't account for symptom duration, severity, or combinations beyond simple set union
-- The recommended specialization is the first in alphabetical order of results — no clinical ranking or weighting is applied
+- Route is behind `withAuth({ roles: ['patient'] })` — doctors and anonymous users get 401/403
+- `OLLAMA_KEY` is server-only — never exposed to the browser
+- Symptoms text is validated and length-capped (Zod) before being sent to the AI
+- The AI response is never directly injected into the DOM — it goes through React state
+- `AbortSignal.timeout(30_000)` prevents hanging requests from blocking the server

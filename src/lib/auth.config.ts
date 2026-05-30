@@ -38,6 +38,11 @@ declare module '@auth/core/jwt' {
 export const authConfig: NextAuthConfig = {
   providers: [], // Credentials provider added in auth.ts (Node.js only)
 
+  secret: process.env.NEXTAUTH_SECRET,
+
+  // Required for local dev (HTTP) and behind proxies (Vercel)
+  trustHost: true,
+
   pages: {
     signIn: '/login',
     error: '/login',

@@ -70,7 +70,7 @@ Every feature produces **two files**:
 
 | Feature | User Guide | Technical Doc |
 |---|---|---|
-| AI Recommendation (Placeholder) | [ai-recommendation-guide.md](./08-ai-placeholder/ai-recommendation-guide.md) | [ai-recommendation-technical.md](./08-ai-placeholder/ai-recommendation-technical.md) |
+| AI Recommendation (Ollama / gemma4) | [ai-recommendation-guide.md](./08-ai-placeholder/ai-recommendation-guide.md) | [ai-recommendation-technical.md](./08-ai-placeholder/ai-recommendation-technical.md) |
 | Security | [security-guide.md](./08-ai-placeholder/security-guide.md) | [security-technical.md](./08-ai-placeholder/security-technical.md) |
 
 ---
@@ -106,3 +106,4 @@ Every feature produces **two files**:
 | POST | `/api/pusher/auth` | Any | Pusher private channel auth |
 | GET | `/api/cron/appointment-reminders` | Cron | Send upcoming reminders |
 | GET | `/api/health` | Public | Health check |
+| POST | `/api/recommend-doctor` | Patient | AI symptom → specialization + matching doctors |

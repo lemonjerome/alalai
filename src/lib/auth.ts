@@ -17,39 +17,44 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        const parsed = loginSchema.safeParse(credentials);
-        if (!parsed.success) return null;
+        try {
+          const parsed = loginSchema.safeParse(credentials);
+          if (!parsed.success) return null;
 
-        const { email, password } = parsed.data;
+          const { email, password } = parsed.data;
 
-        await connectDB();
+          await connectDB();
 
-        const user = await User.findOne({ email }).select('+passwordHash').lean();
-        if (!user) return null;
+          const user = await User.findOne({ email }).select('+passwordHash').lean();
+          if (!user) return null;
 
-        const bcrypt = await import('bcryptjs');
-        const isValid = await bcrypt.compare(password, user.passwordHash);
-        if (!isValid) return null;
+          const bcrypt = await import('bcryptjs');
+          const isValid = await bcrypt.compare(password, user.passwordHash);
+          if (!isValid) return null;
 
-        let doctorProfileId: string | undefined;
-        if (user.role === 'doctor') {
-          const DoctorProfile = (await import('@/models/DoctorProfile')).default;
-          const profile = await DoctorProfile.findOne({ userId: user._id })
-            .select('_id')
-            .lean();
-          if (profile) {
-            doctorProfileId = (profile._id as mongoose.Types.ObjectId).toString();
+          let doctorProfileId: string | undefined;
+          if (user.role === 'doctor') {
+            const DoctorProfile = (await import('@/models/DoctorProfile')).default;
+            const profile = await DoctorProfile.findOne({ userId: user._id })
+              .select('_id')
+              .lean();
+            if (profile) {
+              doctorProfileId = (profile._id as mongoose.Types.ObjectId).toString();
+            }
           }
-        }
 
-        return {
-          id: (user._id as mongoose.Types.ObjectId).toString(),
-          email: user.email,
-          name: user.name,
-          image: user.profilePictureUrl ?? null,
-          role: user.role as UserRole,
-          doctorProfileId,
-        };
+          return {
+            id: (user._id as mongoose.Types.ObjectId).toString(),
+            email: user.email,
+            name: user.name,
+            image: user.profilePictureUrl ?? null,
+            role: user.role as UserRole,
+            doctorProfileId,
+          };
+        } catch {
+          // authorize must return null (not throw) — NextAuth converts throws to CredentialsSignin
+          return null;
+        }
       },
     }),
   ],

@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, AlertCircle } from 'lucide-react';
 import {
   Form,
   FormControl,
@@ -18,6 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { registerDoctorSchema } from '@/lib/validations/auth';
 import type { z } from 'zod';
 
@@ -41,6 +42,7 @@ const SPECIALIZATION_SUGGESTIONS = [
 export function DoctorRegisterForm() {
   const router = useRouter();
   const [specInput, setSpecInput] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
 
   const form = useForm<DoctorFormValues>({
     resolver: zodResolver(registerDoctorSchema),
@@ -74,6 +76,7 @@ export function DoctorRegisterForm() {
   }
 
   async function onSubmit(values: DoctorFormValues) {
+    setFormError(null);
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
@@ -81,14 +84,14 @@ export function DoctorRegisterForm() {
         body: JSON.stringify(values),
       });
 
-      const data = await res.json();
+      const data = await res.json() as { error?: string };
 
       if (!res.ok) {
         if (res.status === 409) {
-          form.setError('email', { message: 'Email already registered' });
+          form.setError('email', { message: 'An account with this email already exists.' });
           return;
         }
-        toast.error((data as { error?: string }).error ?? 'Registration failed');
+        setFormError(data.error ?? 'Registration failed. Please try again.');
         return;
       }
 
@@ -99,8 +102,7 @@ export function DoctorRegisterForm() {
       });
 
       if (signInResult?.error) {
-        toast.error('Account created but sign-in failed. Please log in manually.');
-        router.push('/login');
+        setFormError('Account created but sign-in failed. Please go to the login page.');
         return;
       }
 
@@ -108,13 +110,20 @@ export function DoctorRegisterForm() {
       router.push('/doctor/dashboard');
       router.refresh();
     } catch {
-      toast.error('Something went wrong. Please try again.');
+      setFormError('Something went wrong. Please check your connection and try again.');
     }
   }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {formError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{formError}</AlertDescription>
+          </Alert>
+        )}
+
         <FormField
           control={form.control}
           name="name"

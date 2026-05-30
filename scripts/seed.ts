@@ -1,5 +1,5 @@
 /**
- * Seed script — creates two demo accounts for local testing.
+ * Seed script — creates demo accounts for local / Atlas testing.
  *
  * Usage:
  *   npm run seed
@@ -47,6 +47,8 @@ const DoctorProfileSchema = new mongoose.Schema(
     education: [String],
     yearsOfExperience: { type: Number, default: 0 },
     consultationFee: { type: Number, default: 0 },
+    rating: { type: Number, default: 0 },
+    reviewCount: { type: Number, default: 0 },
     isVerified: { type: Boolean, default: false },
     isAcceptingPatients: { type: Boolean, default: true },
   },
@@ -71,31 +73,55 @@ const PatientProfileModel = mongoose.models.PatientProfile ?? mongoose.model('Pa
 const DoctorProfileModel = mongoose.models.DoctorProfile ?? mongoose.model('DoctorProfile', DoctorProfileSchema);
 const AvailabilityModel = mongoose.models.Availability ?? mongoose.model('Availability', AvailabilitySchema);
 
-// ── Seed data ─────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const DEMO_PASSWORD = 'Demo1234!';
+const WEEKDAYS = [1, 2, 3, 4, 5];
 
-const DEMO_PATIENT = {
-  email: 'patient@demo.com',
-  name: 'Demo Patient',
-  role: 'patient' as const,
-  phone: '+63 912 000 0001',
-};
+async function createDoctor(
+  hash: string,
+  user: { email: string; name: string; phone: string },
+  profile: {
+    licenseNumber: string;
+    specialization: string[];
+    bio: string;
+    education: string[];
+    yearsOfExperience: number;
+    consultationFee: number;
+    rating?: number;
+    reviewCount?: number;
+    isVerified?: boolean;
+  }
+) {
+  let doctor = await UserModel.findOne({ email: user.email });
+  if (doctor) {
+    console.log(`Doctor already exists: ${user.email}`);
+    return;
+  }
+  doctor = await UserModel.create({ ...user, role: 'doctor', passwordHash: hash });
+  const doctorProfile = await DoctorProfileModel.create({
+    userId: doctor._id,
+    ...profile,
+    rating: profile.rating ?? 0,
+    reviewCount: profile.reviewCount ?? 0,
+    isVerified: profile.isVerified ?? false,
+    isAcceptingPatients: true,
+  });
+  await AvailabilityModel.insertMany(
+    WEEKDAYS.map((day) => ({
+      doctorId: doctorProfile._id,
+      dayOfWeek: day,
+      startTime: '09:00',
+      endTime: '17:00',
+      slotDurationMinutes: 30,
+      isActive: true,
+      blockedDates: [],
+    }))
+  );
+  console.log(`Created doctor: ${user.email} → ${profile.specialization.join(', ')}`);
+}
 
-const DEMO_DOCTOR = {
-  email: 'doctor@demo.com',
-  name: 'Dr. Demo Doctor',
-  role: 'doctor' as const,
-  phone: '+63 912 000 0002',
-  licenseNumber: 'PRC-0000001',
-  specialization: ['General Practice', 'Internal Medicine'],
-  bio: 'Demo doctor account for testing the AlalAI telehealth platform.',
-  education: ['MD, University of the Philippines, 2010', 'Internal Medicine Residency, PGH, 2014'],
-  yearsOfExperience: 10,
-  consultationFee: 500,
-};
-
-// ── Main ──────────────────────────────────────────────────────────────────────
+// ── Seed data ─────────────────────────────────────────────────────────────────
 
 async function seed() {
   const uri = process.env.MONGODB_URI;
@@ -105,58 +131,132 @@ async function seed() {
   }
 
   await mongoose.connect(uri);
-  console.log('Connected to MongoDB');
+  console.log('Connected to MongoDB\n');
 
   const hash = await bcrypt.hash(DEMO_PASSWORD, 12);
 
-  // ── Patient ────────────────────────────────────────────────────────────────
-  let patient = await UserModel.findOne({ email: DEMO_PATIENT.email });
+  // ── Demo Patient ───────────────────────────────────────────────────────────
+  let patient = await UserModel.findOne({ email: 'patient@demo.com' });
   if (patient) {
-    console.log(`Patient already exists: ${DEMO_PATIENT.email}`);
+    console.log('Patient already exists: patient@demo.com');
   } else {
-    patient = await UserModel.create({ ...DEMO_PATIENT, passwordHash: hash });
-    await PatientProfileModel.create({ userId: patient._id });
-    console.log(`Created patient: ${DEMO_PATIENT.email}`);
-  }
-
-  // ── Doctor ─────────────────────────────────────────────────────────────────
-  let doctor = await UserModel.findOne({ email: DEMO_DOCTOR.email });
-  if (doctor) {
-    console.log(`Doctor already exists: ${DEMO_DOCTOR.email}`);
-  } else {
-    doctor = await UserModel.create({ ...DEMO_DOCTOR, passwordHash: hash });
-    const profile = await DoctorProfileModel.create({
-      userId: doctor._id,
-      licenseNumber: DEMO_DOCTOR.licenseNumber,
-      specialization: DEMO_DOCTOR.specialization,
-      bio: DEMO_DOCTOR.bio,
-      education: DEMO_DOCTOR.education,
-      yearsOfExperience: DEMO_DOCTOR.yearsOfExperience,
-      consultationFee: DEMO_DOCTOR.consultationFee,
-      isAcceptingPatients: true,
+    patient = await UserModel.create({
+      email: 'patient@demo.com',
+      name: 'Demo Patient',
+      role: 'patient',
+      phone: '+63 912 000 0001',
+      passwordHash: hash,
     });
-
-    // Add Mon–Fri availability (9 AM – 5 PM, 30-min slots)
-    const weekdays = [1, 2, 3, 4, 5];
-    await AvailabilityModel.insertMany(
-      weekdays.map((day) => ({
-        doctorId: profile._id,
-        dayOfWeek: day,
-        startTime: '09:00',
-        endTime: '17:00',
-        slotDurationMinutes: 30,
-        isActive: true,
-        blockedDates: [],
-      }))
-    );
-    console.log(`Created doctor: ${DEMO_DOCTOR.email} (with Mon–Fri availability)`);
+    await PatientProfileModel.create({ userId: patient._id });
+    console.log('Created patient: patient@demo.com');
   }
+
+  // ── Demo Doctor — General Practitioner ────────────────────────────────────
+  await createDoctor(
+    hash,
+    { email: 'doctor@demo.com', name: 'Demo Doctor', phone: '+63 912 000 0002' },
+    {
+      licenseNumber: 'PRC-0000001',
+      specialization: ['General Practitioner'],
+      bio: 'Demo doctor account for testing the AlalAI telehealth platform. Provides comprehensive primary care and routine check-ups.',
+      education: ['MD, University of the Philippines, 2010', 'Internal Medicine Residency, PGH, 2014'],
+      yearsOfExperience: 10,
+      consultationFee: 500,
+      rating: 4.8,
+      reviewCount: 42,
+      isVerified: true,
+    }
+  );
+
+  // ── Cardiology ────────────────────────────────────────────────────────────
+  await createDoctor(
+    hash,
+    { email: 'cardio@demo.com', name: 'Maria Santos', phone: '+63 912 000 0003' },
+    {
+      licenseNumber: 'PRC-0000002',
+      specialization: ['Cardiology'],
+      bio: 'Board-certified cardiologist specializing in heart disease prevention and management. Experienced in ECG interpretation, echocardiography, and cardiac rehabilitation.',
+      education: [
+        'MD, De La Salle Medical and Health Sciences Institute, 2008',
+        'Cardiology Fellowship, Philippine Heart Center, 2015',
+      ],
+      yearsOfExperience: 16,
+      consultationFee: 1200,
+      rating: 4.9,
+      reviewCount: 87,
+      isVerified: true,
+    }
+  );
+
+  // ── Pediatrics ────────────────────────────────────────────────────────────
+  await createDoctor(
+    hash,
+    { email: 'peds@demo.com', name: 'Juan dela Cruz', phone: '+63 912 000 0004' },
+    {
+      licenseNumber: 'PRC-0000003',
+      specialization: ['Pediatrics'],
+      bio: 'Compassionate pediatrician caring for children from newborn to adolescence. Expertise in developmental milestones, vaccinations, and childhood illness management.',
+      education: [
+        'MD, University of Santo Tomas, 2012',
+        'Pediatrics Residency, Philippine Children\'s Medical Center, 2016',
+      ],
+      yearsOfExperience: 12,
+      consultationFee: 800,
+      rating: 4.7,
+      reviewCount: 63,
+      isVerified: true,
+    }
+  );
+
+  // ── Dermatology ───────────────────────────────────────────────────────────
+  await createDoctor(
+    hash,
+    { email: 'derm@demo.com', name: 'Ana Reyes', phone: '+63 912 000 0005' },
+    {
+      licenseNumber: 'PRC-0000004',
+      specialization: ['Dermatology'],
+      bio: 'Dermatologist specializing in medical and cosmetic skin conditions. Expertise in acne, eczema, psoriasis, skin cancer screening, and aesthetic dermatology.',
+      education: [
+        'MD, Ateneo School of Medicine and Public Health, 2011',
+        'Dermatology Residency, Research Institute for Tropical Medicine, 2016',
+      ],
+      yearsOfExperience: 13,
+      consultationFee: 900,
+      rating: 4.6,
+      reviewCount: 55,
+      isVerified: true,
+    }
+  );
+
+  // ── Mental Health ─────────────────────────────────────────────────────────
+  await createDoctor(
+    hash,
+    { email: 'psych@demo.com', name: 'Carlo Bautista', phone: '+63 912 000 0006' },
+    {
+      licenseNumber: 'PRC-0000005',
+      specialization: ['Mental Health'],
+      bio: 'Psychiatrist and mental health advocate specializing in anxiety, depression, PTSD, and mood disorders. Offers evidence-based therapy and medication management in a safe, non-judgmental space.',
+      education: [
+        'MD, Far Eastern University – Nicanor Reyes Medical Foundation, 2009',
+        'Psychiatry Residency, National Center for Mental Health, 2014',
+      ],
+      yearsOfExperience: 15,
+      consultationFee: 1000,
+      rating: 4.9,
+      reviewCount: 71,
+      isVerified: true,
+    }
+  );
 
   console.log('\n─────────────────────────────────────');
   console.log('Demo accounts ready:');
-  console.log(`  Patient  →  ${DEMO_PATIENT.email}`);
-  console.log(`  Doctor   →  ${DEMO_DOCTOR.email}`);
-  console.log(`  Password →  ${DEMO_PASSWORD}`);
+  console.log('  Patient      →  patient@demo.com');
+  console.log('  Doctor (GP)  →  doctor@demo.com');
+  console.log('  Cardiologist →  cardio@demo.com');
+  console.log('  Pediatrician →  peds@demo.com');
+  console.log('  Dermatologist→  derm@demo.com');
+  console.log('  Psychiatrist →  psych@demo.com');
+  console.log(`  Password     →  ${DEMO_PASSWORD}`);
   console.log('─────────────────────────────────────\n');
 
   await mongoose.disconnect();

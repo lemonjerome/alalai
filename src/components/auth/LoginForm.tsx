@@ -1,10 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import {
   Form,
@@ -17,10 +19,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { loginSchema, type LoginInput } from '@/lib/validations/auth';
 
 export function LoginForm() {
   const router = useRouter();
+  const [formError, setFormError] = useState<string | null>(null);
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -28,6 +32,7 @@ export function LoginForm() {
   });
 
   async function onSubmit(values: LoginInput) {
+    setFormError(null);
     try {
       const result = await signIn('credentials', {
         email: values.email,
@@ -36,7 +41,7 @@ export function LoginForm() {
       });
 
       if (result?.error) {
-        toast.error('Invalid email or password. Please try again.');
+        setFormError('Invalid email or password. Please check your credentials and try again.');
         return;
       }
 
@@ -44,7 +49,7 @@ export function LoginForm() {
       router.push('/');
       router.refresh();
     } catch {
-      toast.error('Something went wrong. Please try again.');
+      setFormError('Something went wrong. Please try again later.');
     }
   }
 
@@ -59,6 +64,13 @@ export function LoginForm() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {formError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{formError}</AlertDescription>
+              </Alert>
+            )}
+
             <FormField
               control={form.control}
               name="email"
