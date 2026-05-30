@@ -26,12 +26,21 @@ export const GET = withAuth(
     const limit = Math.min(50, parseInt(searchParams.get('limit') ?? '20', 10));
 
     const query: Record<string, unknown> = { patientId: req.session.user.id };
-    if (status) query.status = status;
+
+    if (status === 'upcoming') {
+      // Active (pending or confirmed) and not in the past
+      query.status = { $in: ['pending', 'confirmed'] };
+      query.scheduledAt = { $gte: new Date() };
+    } else if (status) {
+      query.status = status;
+    }
 
     const skip = (page - 1) * limit;
+    // Upcoming: soonest first; everything else: newest first
+    const sortOrder = status === 'upcoming' ? 1 : -1;
     const [rawAppointments, total] = await Promise.all([
       Appointment.find(query)
-        .sort({ scheduledAt: -1 })
+        .sort({ scheduledAt: sortOrder })
         .skip(skip)
         .limit(limit)
         .lean<IAppointmentDocument[]>(),

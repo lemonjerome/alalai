@@ -69,7 +69,7 @@ export default function PatientAppointmentsPage() {
         </TabsList>
 
         <TabsContent value="upcoming">
-          <AppointmentTab />
+          <AppointmentTab status="upcoming" />
         </TabsContent>
         <TabsContent value="completed">
           <AppointmentTab status="completed" />
