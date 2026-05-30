@@ -20,7 +20,7 @@ export default async function LandingPage() {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-sm">A</span>
             </div>
-            <span className="font-bold text-xl tracking-tight">AlalAI</span>
+            <span className="font-bold text-xl tracking-tight"><span className="text-gray-900">Alal</span><span className="text-primary">AI</span></span>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="ghost" render={<Link href="/login" />}>
@@ -56,7 +56,7 @@ export default async function LandingPage() {
 
       {/* Role Cards */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full">
-        <h2 className="text-2xl font-bold text-center mb-10">How AlalAI Works</h2>
+        <h2 className="text-2xl font-bold text-center mb-10">How <span className="text-gray-900">Alal</span><span className="text-primary">AI</span> Works</h2>
         <div className="grid md:grid-cols-2 gap-6">
           {/* Patient Card */}
           <Card className="hover:shadow-lg transition-shadow">
@@ -135,7 +135,7 @@ export default async function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t py-8 text-center text-sm text-muted-foreground">
-        <p>© 2026 AlalAI. Built for the Whitecloak Launchpad Program.</p>
+        <p>© 2026 <span className="text-gray-900 font-medium">Alal</span><span className="text-primary font-medium">AI</span>. Built for the Whitecloak Launchpad Program.</p>
       </footer>
     </main>
   );

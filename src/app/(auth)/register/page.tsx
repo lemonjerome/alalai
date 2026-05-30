@@ -26,7 +26,7 @@ export default function RegisterPage() {
           <CardHeader className="space-y-3 pb-4">
             <CardTitle className="text-2xl font-bold text-center">Create an account</CardTitle>
             <CardDescription className="text-center">
-              Join AlalAI as a patient or doctor
+              Join <span className="text-gray-900 font-semibold">Alal</span><span className="text-primary font-semibold">AI</span> as a patient or doctor
             </CardDescription>
             <TabsList className="w-full">
               <TabsTrigger value="patient" className="flex-1">I&apos;m a Patient</TabsTrigger>

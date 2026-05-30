@@ -47,7 +47,7 @@ export function PatientNav() {
       {/* Brand */}
       <div className="flex items-center gap-2 px-4 py-5 border-b">
         <Heart className="h-6 w-6 text-primary fill-primary" />
-        <span className="font-bold text-lg text-primary tracking-tight">AlalAI</span>
+        <span className="font-bold text-lg tracking-tight"><span className="text-gray-900">Alal</span><span className="text-primary">AI</span></span>
       </div>
 
       {/* Links */}

@@ -22,7 +22,7 @@ export function MobileHeader({ role }: MobileHeaderProps) {
         ) : (
           <Stethoscope className="h-5 w-5 text-primary" />
         )}
-        <span className="font-bold text-lg text-primary tracking-tight">AlalAI</span>
+        <span className="font-bold text-lg tracking-tight"><span className="text-gray-900">Alal</span><span className="text-primary">AI</span></span>
       </div>
 
       {/* Hamburger */}
