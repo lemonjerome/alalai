@@ -3,7 +3,7 @@
 A patient-doctor consultation booking platform with real-time notifications, virtual video consultations, and medical records management.
 
 **Built for**: Whitecloak Launchpad Builder Round (May 26–30, 2026)  
-**Live App**: *(URL to be added after production deployment)*  
+**Live App**: https://alalai-sage.vercel.app  
 **Repo**: https://github.com/lemonjerome/alalai
 
 ---
