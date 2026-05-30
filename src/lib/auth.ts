@@ -51,8 +51,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             role: user.role as UserRole,
             doctorProfileId,
           };
-        } catch {
+        } catch (err) {
           // authorize must return null (not throw) — NextAuth converts throws to CredentialsSignin
+          // Temporary: log to surface Vercel-specific failures
+          console.error('[authorize] unexpected error:', err);
           return null;
         }
       },
