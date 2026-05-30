@@ -96,7 +96,7 @@ export default function DoctorDetailPage({ params }: PageProps) {
               <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-600">
                 <span className="flex items-center gap-1">
                   <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  <strong>{doctorProfile.rating.toFixed(1)}</strong>
+                  <strong>{(doctorProfile.rating ?? 0).toFixed(1)}</strong>
                   <span className="text-gray-400">({doctorProfile.reviewCount} reviews)</span>
                 </span>
                 <span className="flex items-center gap-1">

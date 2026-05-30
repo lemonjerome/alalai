@@ -91,7 +91,7 @@ export function PatientNav() {
           variant="ghost"
           size="sm"
           className="w-full justify-start gap-2 text-gray-500"
-          onClick={() => signOut({ callbackUrl: '/login' })}
+          onClick={() => signOut({ callbackUrl: '/' })}
         >
           <LogOut className="h-4 w-4" />
           Sign out

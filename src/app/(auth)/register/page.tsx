@@ -23,26 +23,29 @@ export default function RegisterPage() {
 
       <Tabs defaultValue="patient">
         <Card>
-          <CardHeader className="space-y-3">
+          <CardHeader className="space-y-3 pb-4">
             <CardTitle className="text-2xl font-bold text-center">Create an account</CardTitle>
             <CardDescription className="text-center">
               Join AlalAI as a patient or doctor
             </CardDescription>
-            <TabsList className="grid w-full grid-cols-2 h-10">
-              <TabsTrigger value="patient">I&apos;m a Patient</TabsTrigger>
-              <TabsTrigger value="doctor">I&apos;m a Doctor</TabsTrigger>
+            <TabsList className="w-full">
+              <TabsTrigger value="patient" className="flex-1">I&apos;m a Patient</TabsTrigger>
+              <TabsTrigger value="doctor" className="flex-1">I&apos;m a Doctor</TabsTrigger>
             </TabsList>
           </CardHeader>
 
-          <CardContent>
-            <TabsContent value="patient" className="mt-0">
-              <PatientRegisterForm />
-            </TabsContent>
-            <TabsContent value="doctor" className="mt-0">
-              <DoctorRegisterForm />
-            </TabsContent>
+          {/* Fixed min-height so both tabs occupy the same card size */}
+          <CardContent className="min-h-[520px] flex flex-col">
+            <div className="flex-1">
+              <TabsContent value="patient" className="mt-0">
+                <PatientRegisterForm />
+              </TabsContent>
+              <TabsContent value="doctor" className="mt-0">
+                <DoctorRegisterForm />
+              </TabsContent>
+            </div>
 
-            <p className="mt-4 text-center text-sm text-muted-foreground">
+            <p className="mt-6 text-center text-sm text-muted-foreground">
               Already have an account?{' '}
               <Link href="/login" className="text-primary hover:underline font-medium">
                 Sign in

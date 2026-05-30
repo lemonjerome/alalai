@@ -15,7 +15,7 @@ import type { IAvailabilityDocument } from '@/models/Availability';
 import type { IAppointmentDocument } from '@/models/Appointment';
 import type { IUserDocument } from '@/models/User';
 
-// GET /api/appointments — patient fetches own appointments
+// GET /api/appointments — patient fetches own appointments (enriched with counterpart name)
 export const GET = withAuth(
   async (req: AuthenticatedRequest) => {
     await connectDB();
@@ -29,14 +29,26 @@ export const GET = withAuth(
     if (status) query.status = status;
 
     const skip = (page - 1) * limit;
-    const [appointments, total] = await Promise.all([
+    const [rawAppointments, total] = await Promise.all([
       Appointment.find(query)
         .sort({ scheduledAt: -1 })
         .skip(skip)
         .limit(limit)
-        .lean(),
+        .lean<IAppointmentDocument[]>(),
       Appointment.countDocuments(query),
     ]);
+
+    // Join doctor names in one batch query
+    const doctorUserIds = [...new Set(rawAppointments.map((a) => String(a.doctorId)))];
+    const doctorUsers = await User.find({ _id: { $in: doctorUserIds } })
+      .select('name')
+      .lean<IUserDocument[]>();
+    const doctorNameMap = new Map(doctorUsers.map((u) => [String(u._id), u.name]));
+
+    const appointments = rawAppointments.map((a) => ({
+      ...a,
+      doctorName: doctorNameMap.get(String(a.doctorId)) ?? null,
+    }));
 
     return NextResponse.json({ appointments, total, page, pages: Math.ceil(total / limit) });
   },
@@ -120,17 +132,17 @@ export const POST = withAuth(
       doctorProfileId: doctorProfile._id,
       scheduledAt: requestedDate,
       durationMinutes,
-      status: 'confirmed',
+      status: 'pending',
       jitsiRoomId: `alalai-${appointmentId.toString()}`,
     });
 
-    // Send notifications (best-effort — don't fail the booking if this errors)
+    // Send booking request notifications (best-effort)
     try {
       const [patientUser, doctorUser] = await Promise.all([
         User.findById(req.session.user.id).select('name').lean<IUserDocument>(),
         User.findById(doctorProfile.userId).select('name').lean<IUserDocument>(),
       ]);
-      await NotificationService.sendAppointmentBooked({
+      await NotificationService.sendBookingRequest({
         patientId: req.session.user.id,
         doctorId: String(doctorProfile.userId),
         doctorName: doctorUser?.name ?? 'Doctor',

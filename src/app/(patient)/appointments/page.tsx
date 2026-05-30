@@ -40,6 +40,7 @@ function AppointmentTab({ status }: { status?: string }) {
         <AppointmentCard
           key={String(appt._id)}
           appointment={appt}
+          counterpartName={appt.doctorName ?? undefined}
           role="patient"
         />
       ))}
@@ -61,10 +62,10 @@ export default function PatientAppointmentsPage() {
       </div>
 
       <Tabs defaultValue="upcoming">
-        <TabsList>
-          <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-          <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+        <TabsList className="w-full">
+          <TabsTrigger value="upcoming" className="flex-1">Upcoming</TabsTrigger>
+          <TabsTrigger value="completed" className="flex-1">Completed</TabsTrigger>
+          <TabsTrigger value="cancelled" className="flex-1">Cancelled</TabsTrigger>
         </TabsList>
 
         <TabsContent value="upcoming">

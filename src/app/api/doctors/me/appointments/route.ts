@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { withAuth, type AuthenticatedRequest } from '@/lib/api-guard';
 import Appointment from '@/models/Appointment';
+import User from '@/models/User';
 import type { IAppointmentDocument } from '@/models/Appointment';
+import type { IUserDocument } from '@/models/User';
 
 // GET /api/doctors/me/appointments — doctor's appointment list with filters
 export const GET = withAuth(
@@ -39,7 +41,7 @@ export const GET = withAuth(
 
     const skip = (page - 1) * limit;
 
-    const [appointments, total] = await Promise.all([
+    const [rawAppointments, total] = await Promise.all([
       Appointment.find(query)
         .sort({ scheduledAt: 1 })
         .skip(skip)
@@ -47,6 +49,18 @@ export const GET = withAuth(
         .lean<IAppointmentDocument[]>(),
       Appointment.countDocuments(query),
     ]);
+
+    // Join patient names in one batch query
+    const patientUserIds = [...new Set(rawAppointments.map((a) => String(a.patientId)))];
+    const patientUsers = await User.find({ _id: { $in: patientUserIds } })
+      .select('name')
+      .lean<IUserDocument[]>();
+    const patientNameMap = new Map(patientUsers.map((u) => [String(u._id), u.name]));
+
+    const appointments = rawAppointments.map((a) => ({
+      ...a,
+      patientName: patientNameMap.get(String(a.patientId)) ?? null,
+    }));
 
     return NextResponse.json({
       appointments,

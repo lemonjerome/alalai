@@ -15,7 +15,8 @@ interface RescheduleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   appointmentId: string;
-  doctorId: string;
+  /** DoctorProfile._id — NOT the user ID */
+  doctorProfileId: string;
   durationMinutes?: number;
   isPending: boolean;
   onConfirm: (scheduledAt: string) => void;
@@ -33,7 +34,7 @@ function getMonthRange(date: Date): { from: string; to: string } {
 export function RescheduleDialog({
   open,
   onOpenChange,
-  doctorId,
+  doctorProfileId,
   isPending,
   onConfirm,
 }: RescheduleDialogProps) {
@@ -42,7 +43,7 @@ export function RescheduleDialog({
   const [month, setMonth] = useState(new Date());
 
   const { from, to } = getMonthRange(month);
-  const { data: availability, isLoading } = useDoctorAvailability(doctorId, from, to);
+  const { data: availability, isLoading } = useDoctorAvailability(doctorProfileId, from, to);
 
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);

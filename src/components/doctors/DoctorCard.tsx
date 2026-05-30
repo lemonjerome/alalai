@@ -70,11 +70,11 @@ export function DoctorCard({ doctor }: DoctorCardProps) {
           <p className="mt-3 text-sm text-gray-600 line-clamp-2">{doctorProfile.bio}</p>
         )}
 
-        <div className="mt-4 flex items-center gap-4 text-sm">
+        <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
           <span className="flex items-center gap-1 text-amber-500">
             <Star className="h-3.5 w-3.5 fill-current" />
             <span className="font-medium text-gray-700">
-              {doctorProfile.rating.toFixed(1)}
+              {(doctorProfile.rating ?? 0).toFixed(1)}
             </span>
             <span className="text-gray-400">({doctorProfile.reviewCount})</span>
           </span>
@@ -97,7 +97,7 @@ export function DoctorCard({ doctor }: DoctorCardProps) {
         )}
       </CardContent>
 
-      <CardFooter className="pt-0">
+      <CardFooter className="pt-4 pb-5 px-5">
         <Link
           href={`/doctors/${doctorProfile._id}`}
           className={cn(buttonVariants({ variant: 'default' }), 'w-full justify-center')}

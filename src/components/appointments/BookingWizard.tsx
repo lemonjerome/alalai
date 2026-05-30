@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calendar } from '@/components/ui/calendar';
 import { TimeSlotPicker } from '@/components/appointments/TimeSlotPicker';
@@ -38,7 +38,13 @@ export function BookingWizard({
   initialSlot,
 }: BookingWizardProps) {
   const router = useRouter();
+  const cardRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState<Step>(initialSlot ? 'confirm' : 'date');
+
+  // Scroll the card into view whenever the step changes so the header is never clipped
+  useEffect(() => {
+    cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [step]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     initialSlot ? new Date(initialSlot) : undefined
   );
@@ -124,7 +130,7 @@ export function BookingWizard({
   }
 
   return (
-    <Card>
+    <Card ref={cardRef}>
       <CardHeader>
         {/* Step indicator */}
         <div className="flex items-center gap-2 mb-2">

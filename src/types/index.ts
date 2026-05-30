@@ -27,6 +27,8 @@ export interface IPatientProfile {
   allergies: string[];
   currentMedications: string[];
   medicalHistory: string;
+  address: string;
+  maritalStatus: string;
   emergencyContact: {
     name: string;
     phone: string;
@@ -110,6 +112,9 @@ export interface IMedicalRecord {
 }
 
 export type NotificationType =
+  | 'appointment_request'
+  | 'appointment_confirmed'
+  | 'appointment_rejected'
   | 'appointment_booked'
   | 'appointment_reminder'
   | 'appointment_cancelled'

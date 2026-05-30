@@ -3,7 +3,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { IAppointmentDocument } from '@/models/Appointment';
 
-export type AppointmentWithId = Omit<IAppointmentDocument, keyof Document> & { _id: string };
+export type AppointmentWithId = Omit<IAppointmentDocument, keyof Document> & {
+  _id: string;
+  /** Populated by GET /api/appointments — doctor name for patient view */
+  doctorName?: string | null;
+  /** Populated by GET /api/doctors/me/appointments — patient name for doctor view */
+  patientName?: string | null;
+};
 
 interface AppointmentsResponse {
   appointments: AppointmentWithId[];
@@ -134,6 +140,50 @@ export function useRescheduleAppointment() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['appointments'] });
       void queryClient.invalidateQueries({ queryKey: ['doctorAvailability'] });
+    },
+  });
+}
+
+// ── Confirm appointment (doctor) ─────────────────────────────────────────────
+
+export function useConfirmAppointment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/appointments/${id}/confirm`, { method: 'PATCH' });
+      if (!res.ok) {
+        const err = await res.json() as { error: string };
+        throw new Error(err.error ?? 'Failed to confirm appointment');
+      }
+      return res.json() as Promise<{ appointment: AppointmentWithId }>;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+
+// ── Reject appointment (doctor) — uses cancel endpoint with reason ────────────
+
+export function useRejectAppointment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const res = await fetch(`/api/appointments/${id}/cancel`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cancellationReason: reason }),
+      });
+      if (!res.ok) {
+        const err = await res.json() as { error: string };
+        throw new Error(err.error ?? 'Failed to reject appointment');
+      }
+      return res.json() as Promise<{ appointment: AppointmentWithId }>;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      void queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 }

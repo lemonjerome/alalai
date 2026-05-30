@@ -5,16 +5,25 @@ import Notification from '@/models/Notification';
 import type { INotificationDocument } from '@/models/Notification';
 
 // GET /api/notifications — paginated notifications for current user
+// ?tab=new|read|all  (default: all)
+// Legacy: ?unreadOnly=true  → equivalent to tab=new
 export const GET = withAuth(async (req: AuthenticatedRequest) => {
   await connectDB();
 
   const { searchParams } = req.nextUrl;
-  const unreadOnly = searchParams.get('unreadOnly') === 'true';
+  const tab = searchParams.get('tab'); // 'new' | 'read' | 'all'
+  const unreadOnly = searchParams.get('unreadOnly') === 'true'; // legacy
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
   const limit = Math.min(50, parseInt(searchParams.get('limit') ?? '20', 10));
 
   const query: Record<string, unknown> = { userId: req.session.user.id };
-  if (unreadOnly) query.isRead = false;
+
+  if (tab === 'new' || unreadOnly) {
+    query.isRead = false;
+  } else if (tab === 'read') {
+    query.isRead = true;
+  }
+  // tab === 'all' or no tab → no isRead filter
 
   const skip = (page - 1) * limit;
 

@@ -6,6 +6,7 @@ export interface INotificationDocument extends Document {
   type: NotificationType;
   title: string;
   message: string;
+  link: string;
   data: Record<string, unknown>;
   isRead: boolean;
   createdAt: Date;
@@ -23,6 +24,9 @@ const NotificationSchema = new Schema<INotificationDocument>(
     type: {
       type: String,
       enum: [
+        'appointment_request',
+        'appointment_confirmed',
+        'appointment_rejected',
         'appointment_booked',
         'appointment_reminder',
         'appointment_cancelled',
@@ -31,25 +35,11 @@ const NotificationSchema = new Schema<INotificationDocument>(
       ],
       required: true,
     },
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    message: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    data: {
-      type: Schema.Types.Mixed,
-      default: {},
-    },
-    isRead: {
-      type: Boolean,
-      default: false,
-      index: true,
-    },
+    title: { type: String, required: true, trim: true },
+    message: { type: String, required: true, trim: true },
+    link: { type: String, default: '' },
+    data: { type: Schema.Types.Mixed, default: {} },
+    isRead: { type: Boolean, default: false, index: true },
   },
   {
     timestamps: true,
@@ -57,7 +47,6 @@ const NotificationSchema = new Schema<INotificationDocument>(
   }
 );
 
-// Compound index for efficient unread queries per user
 NotificationSchema.index({ userId: 1, isRead: 1, createdAt: -1 });
 
 const NotificationModel: Model<INotificationDocument> =

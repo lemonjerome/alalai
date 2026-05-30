@@ -1,12 +1,16 @@
 'use client';
 
-import { Bell, CalendarCheck, CalendarX, Clock, FileText, RotateCcw } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Bell, CalendarCheck, CalendarClock, CalendarX, Clock, FileText, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMarkRead } from '@/hooks/useNotifications';
 import type { NotificationItem } from '@/hooks/useNotifications';
 
 const TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  appointment_request: CalendarClock,
   appointment_booked: CalendarCheck,
+  appointment_confirmed: CalendarCheck,
+  appointment_rejected: CalendarX,
   appointment_cancelled: CalendarX,
   appointment_rescheduled: RotateCcw,
   appointment_reminder: Clock,
@@ -29,19 +33,26 @@ function timeAgo(dateStr: string): string {
 
 export function NotificationItemRow({ notification }: NotificationItemProps) {
   const markRead = useMarkRead();
+  const router = useRouter();
   const Icon = TYPE_ICONS[notification.type] ?? Bell;
+
+  const handleClick = () => {
+    if (!notification.isRead) {
+      markRead.mutate(String(notification._id));
+    }
+    if (notification.link) {
+      router.push(notification.link);
+    }
+  };
 
   return (
     <button
       type="button"
-      onClick={() => {
-        if (!notification.isRead) {
-          markRead.mutate(String(notification._id));
-        }
-      }}
+      onClick={handleClick}
       className={cn(
         'w-full text-left flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors',
-        !notification.isRead && 'bg-primary/5'
+        !notification.isRead && 'bg-primary/5',
+        notification.link && 'cursor-pointer'
       )}
     >
       <div

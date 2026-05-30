@@ -75,16 +75,33 @@ export const PATCH = withAuth(
         User.findById(appointment.patientId).select('name').lean<IUserDocument>(),
         User.findById(appointment.doctorId).select('name').lean<IUserDocument>(),
       ]);
-      await NotificationService.sendAppointmentCancelled({
-        patientId: String(appointment.patientId),
-        doctorId: String(appointment.doctorId),
-        doctorName: doctorUser?.name ?? 'Doctor',
-        patientName: patientUser?.name ?? 'Patient',
-        appointmentId: String(appointment._id),
-        scheduledAt: appointment.scheduledAt,
-        cancelledBy,
-        reason: parsed.data.cancellationReason,
-      });
+
+      // Doctor declining a pending request = rejection notification
+      const isDoctorRejecting =
+        cancelledBy === 'doctor' && appointment.status === 'pending';
+
+      if (isDoctorRejecting) {
+        await NotificationService.sendAppointmentRejected({
+          patientId: String(appointment.patientId),
+          doctorId: String(appointment.doctorId),
+          doctorName: doctorUser?.name ?? 'Doctor',
+          patientName: patientUser?.name ?? 'Patient',
+          appointmentId: String(appointment._id),
+          scheduledAt: appointment.scheduledAt,
+          reason: parsed.data.cancellationReason,
+        });
+      } else {
+        await NotificationService.sendAppointmentCancelled({
+          patientId: String(appointment.patientId),
+          doctorId: String(appointment.doctorId),
+          doctorName: doctorUser?.name ?? 'Doctor',
+          patientName: patientUser?.name ?? 'Patient',
+          appointmentId: String(appointment._id),
+          scheduledAt: appointment.scheduledAt,
+          cancelledBy,
+          reason: parsed.data.cancellationReason,
+        });
+      }
     } catch {
       // Non-fatal
     }

@@ -1,15 +1,5 @@
 import { z } from 'zod';
 
-export const SUPPORTED_SPECIALIZATIONS = [
-  'General Practitioner',
-  'Pediatrics',
-  'Dermatology',
-  'Mental Health',
-  'Cardiology',
-] as const;
-
-export type SupportedSpecialization = (typeof SUPPORTED_SPECIALIZATIONS)[number];
-
 export const recommendRequestSchema = z.object({
   symptoms: z
     .string()
@@ -21,7 +11,7 @@ export const recommendRequestSchema = z.object({
 export type RecommendRequest = z.infer<typeof recommendRequestSchema>;
 
 export const ollamaResponseSchema = z.object({
-  specialization: z.enum(SUPPORTED_SPECIALIZATIONS),
+  specializations: z.array(z.string()).min(1),
   reasoning: z.string().min(1),
 });
 
@@ -41,8 +31,13 @@ export interface RecommendedDoctor {
   isVerified: boolean;
 }
 
+export interface SpecializationGroup {
+  topRated: RecommendedDoctor[];
+  mostAvailable: RecommendedDoctor[];
+}
+
 export interface RecommendResponse {
-  specialization: SupportedSpecialization;
+  specializations: string[];
   reasoning: string;
-  doctors: RecommendedDoctor[];
+  bySpecialization: Record<string, SpecializationGroup>;
 }

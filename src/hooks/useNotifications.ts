@@ -9,11 +9,14 @@ export interface NotificationItem {
   type: string;
   title: string;
   message: string;
+  link: string;
   data: Record<string, unknown>;
   isRead: boolean;
   createdAt: string;
   updatedAt: string;
 }
+
+export type NotificationTab = 'new' | 'read' | 'all';
 
 interface NotificationsResponse {
   notifications: NotificationItem[];
@@ -23,17 +26,16 @@ interface NotificationsResponse {
   unreadCount: number;
 }
 
-async function fetchNotifications(unreadOnly = false): Promise<NotificationsResponse> {
-  const params = unreadOnly ? '?unreadOnly=true' : '';
-  const res = await fetch(`/api/notifications${params}`);
+async function fetchNotifications(tab: NotificationTab = 'all'): Promise<NotificationsResponse> {
+  const res = await fetch(`/api/notifications?tab=${tab}`);
   if (!res.ok) throw new Error('Failed to fetch notifications');
   return res.json() as Promise<NotificationsResponse>;
 }
 
-export function useNotifications(unreadOnly = false) {
+export function useNotifications(tab: NotificationTab = 'all') {
   return useQuery({
-    queryKey: ['notifications', unreadOnly],
-    queryFn: () => fetchNotifications(unreadOnly),
+    queryKey: ['notifications', tab],
+    queryFn: () => fetchNotifications(tab),
     staleTime: 0,
   });
 }

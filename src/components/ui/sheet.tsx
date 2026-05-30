@@ -2,58 +2,63 @@
 
 import * as React from 'react';
 import { Drawer } from '@base-ui/react/drawer';
-import { X } from 'lucide-react';
+import { XIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const Sheet = Drawer.Root;
-const SheetTrigger = Drawer.Trigger;
-
-const SheetClose = React.forwardRef<
-  HTMLButtonElement,
-  React.ButtonHTMLAttributes<HTMLButtonElement>
->(({ className, ...props }, ref) => (
-  <Drawer.Close
-    ref={ref}
-    className={cn('rounded-sm opacity-70 hover:opacity-100', className)}
-    {...props}
-  />
-));
-SheetClose.displayName = 'SheetClose';
-
-interface SheetContentProps {
-  side?: 'left' | 'right';
-  className?: string;
-  children?: React.ReactNode;
+function Sheet({ ...props }: Drawer.Root.Props) {
+  return <Drawer.Root {...props} />;
 }
 
-function SheetContent({ side = 'left', className, children }: SheetContentProps) {
+function SheetTrigger({ ...props }: Drawer.Trigger.Props) {
+  return <Drawer.Trigger {...props} />;
+}
+
+function SheetClose({ ...props }: Drawer.Close.Props) {
+  return <Drawer.Close {...props} />;
+}
+
+interface SheetContentProps extends Drawer.Popup.Props {
+  side?: 'left' | 'right';
+  showCloseButton?: boolean;
+}
+
+function SheetContent({
+  side = 'left',
+  className,
+  children,
+  showCloseButton = true,
+  ...props
+}: SheetContentProps) {
   return (
     <Drawer.Portal>
-      <Drawer.Backdrop className="fixed inset-0 z-50 bg-black/50" />
+      <Drawer.Backdrop className="fixed inset-0 z-50 bg-black/50 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
       <Drawer.Popup
         className={cn(
-          'fixed z-50 bg-background shadow-xl flex flex-col',
-          'data-[ending-style]:transition-transform data-[ending-style]:duration-200',
+          'fixed top-0 z-50 flex h-full w-64 flex-col bg-white shadow-xl',
+          'duration-200 data-open:animate-in data-closed:animate-out',
           side === 'left'
-            ? 'inset-y-0 left-0 h-full w-64 border-r'
-            : 'inset-y-0 right-0 h-full w-64 border-l',
+            ? 'left-0 border-r data-open:slide-in-from-left data-closed:slide-out-to-left'
+            : 'right-0 border-l data-open:slide-in-from-right data-closed:slide-out-to-right',
           className
         )}
+        {...props}
       >
         {children}
-        <Drawer.Close
-          className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
-          aria-label="Close menu"
-        >
-          <X className="h-4 w-4" />
-        </Drawer.Close>
+        {showCloseButton && (
+          <Drawer.Close
+            className="absolute right-4 top-4 rounded-sm p-1 opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring"
+            aria-label="Close"
+          >
+            <XIcon className="h-4 w-4" />
+          </Drawer.Close>
+        )}
       </Drawer.Popup>
     </Drawer.Portal>
   );
 }
 
 const SheetHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('flex flex-col space-y-2 px-4 py-4 border-b', className)} {...props} />
+  <div className={cn('flex flex-col gap-1.5 px-4 py-4 border-b', className)} {...props} />
 );
 SheetHeader.displayName = 'SheetHeader';
 

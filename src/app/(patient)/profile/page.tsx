@@ -7,6 +7,7 @@ import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { PersonalInfoForm } from '@/components/profile/PersonalInfoForm';
 import { HealthInfoForm } from '@/components/profile/HealthInfoForm';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import type { MaritalStatus } from '@/models/PatientProfile';
 
 export default function PatientProfilePage() {
   const { data, isLoading } = useCurrentUser();
@@ -36,9 +37,9 @@ export default function PatientProfilePage() {
       </div>
 
       <Tabs defaultValue="personal">
-        <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger value="personal">Personal Info</TabsTrigger>
-          <TabsTrigger value="health">Health Info</TabsTrigger>
+        <TabsList className="w-full">
+          <TabsTrigger value="personal" className="flex-1">Personal Info</TabsTrigger>
+          <TabsTrigger value="health" className="flex-1">Health Info</TabsTrigger>
         </TabsList>
 
         <TabsContent value="personal">
@@ -54,6 +55,8 @@ export default function PatientProfilePage() {
                 defaultValues={{
                   name: user?.name,
                   phone: user?.phone,
+                  address: profile?.address as string | undefined,
+                  maritalStatus: (profile?.maritalStatus ?? '') as MaritalStatus,
                 }}
               />
             </CardContent>

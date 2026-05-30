@@ -1,7 +1,6 @@
 import {
   recommendRequestSchema,
   ollamaResponseSchema,
-  SUPPORTED_SPECIALIZATIONS,
 } from '@/lib/validations/recommend';
 
 describe('recommendRequestSchema', () => {
@@ -34,39 +33,44 @@ describe('recommendRequestSchema', () => {
 });
 
 describe('ollamaResponseSchema', () => {
-  it('accepts a valid Ollama response for each supported specialization', () => {
-    for (const spec of SUPPORTED_SPECIALIZATIONS) {
-      const result = ollamaResponseSchema.safeParse({
-        specialization: spec,
-        reasoning: 'This specialist is best suited for your condition.',
-      });
-      expect(result.success).toBe(true);
+  it('accepts a response with a single specialization', () => {
+    const result = ollamaResponseSchema.safeParse({
+      specializations: ['General Practice'],
+      reasoning: 'A general practitioner can evaluate your symptoms.',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts a response with multiple specializations', () => {
+    const result = ollamaResponseSchema.safeParse({
+      specializations: ['Cardiology', 'General Practice'],
+      reasoning: 'Your symptoms may relate to both heart and general health issues.',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.specializations).toHaveLength(2);
     }
   });
 
-  it('rejects an unknown specialization', () => {
+  it('rejects an empty specializations array', () => {
     const result = ollamaResponseSchema.safeParse({
-      specialization: 'Neurology',
-      reasoning: 'You should see a neurologist.',
+      specializations: [],
+      reasoning: 'Some reasoning.',
     });
     expect(result.success).toBe(false);
   });
 
   it('rejects missing reasoning', () => {
     const result = ollamaResponseSchema.safeParse({
-      specialization: 'Cardiology',
+      specializations: ['Cardiology'],
     });
     expect(result.success).toBe(false);
   });
-});
 
-describe('SUPPORTED_SPECIALIZATIONS', () => {
-  it('contains exactly the 5 triage specializations', () => {
-    expect(SUPPORTED_SPECIALIZATIONS).toHaveLength(5);
-    expect(SUPPORTED_SPECIALIZATIONS).toContain('General Practitioner');
-    expect(SUPPORTED_SPECIALIZATIONS).toContain('Pediatrics');
-    expect(SUPPORTED_SPECIALIZATIONS).toContain('Dermatology');
-    expect(SUPPORTED_SPECIALIZATIONS).toContain('Mental Health');
-    expect(SUPPORTED_SPECIALIZATIONS).toContain('Cardiology');
+  it('rejects missing specializations', () => {
+    const result = ollamaResponseSchema.safeParse({
+      reasoning: 'You should see a doctor.',
+    });
+    expect(result.success).toBe(false);
   });
 });

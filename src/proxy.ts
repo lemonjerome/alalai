@@ -44,13 +44,13 @@ export async function proxy(req: NextRequest) {
 
   const role = token.role as string | undefined;
 
-  // Prevent patients from accessing doctor routes
-  if (pathname.startsWith('/doctor') && role !== 'doctor') {
-    return NextResponse.redirect(new URL('/patient/dashboard', req.url));
+  // Prevent patients from accessing doctor routes (/doctor/... but NOT /doctors/...)
+  if ((pathname === '/doctor' || pathname.startsWith('/doctor/')) && role !== 'doctor') {
+    return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
-  // Prevent doctors from accessing patient routes
-  if (pathname.startsWith('/patient') && role !== 'patient') {
+  // Prevent doctors from accessing patient routes (/patient/... — no such routes currently, but guard anyway)
+  if (pathname.startsWith('/patient/') && role !== 'patient') {
     return NextResponse.redirect(new URL('/doctor/dashboard', req.url));
   }
 

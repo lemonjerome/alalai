@@ -1,4 +1,8 @@
 import mongoose, { Document, Model, Schema, Types } from 'mongoose';
+import { MARITAL_STATUS_VALUES } from '@/lib/validations/user';
+
+export type MaritalStatus = (typeof MARITAL_STATUS_VALUES)[number];
+export { MARITAL_STATUS_VALUES };
 
 interface EmergencyContact {
   name: string;
@@ -15,6 +19,8 @@ export interface IPatientProfileDocument extends Document {
   allergies: string[];
   currentMedications: string[];
   medicalHistory: string;
+  address: string;
+  maritalStatus: MaritalStatus;
   emergencyContact: EmergencyContact;
   createdAt: Date;
   updatedAt: Date;
@@ -57,6 +63,15 @@ const PatientProfileSchema = new Schema<IPatientProfileDocument>(
     medicalHistory: {
       type: String,
       default: '',
+    },
+    address: {
+      type: String,
+      default: '',
+    },
+    maritalStatus: {
+      type: String,
+      default: '',
+      enum: MARITAL_STATUS_VALUES,
     },
     emergencyContact: {
       name: { type: String, default: '' },
