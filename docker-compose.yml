@@ -1,14 +1,22 @@
 version: '3.9'
 
-# Local development stack — mirrors production services but uses free/local equivalents.
+# ── Local development stack ────────────────────────────────────────────────────
+#
+# SETUP (first time):
+#   cp .docker.env.example .docker.env
+#   # fill in your real credentials in .docker.env
+#   docker compose up -d
+#
 # Usage:
 #   docker compose up -d          # start all services
-#   docker compose up app         # start app (MongoDB auto-starts as dependency)
 #   docker compose logs -f app    # tail app logs
 #   docker compose down -v        # stop and wipe volumes
+#
+# .docker.env is gitignored — never commit real credentials.
+# ──────────────────────────────────────────────────────────────────────────────
 
 services:
-  # ── MongoDB ────────────────────────────────────────────────────────────────
+  # ── MongoDB (local fallback — skip if using Atlas) ─────────────────────────
   mongo:
     image: mongo:7
     restart: unless-stopped
@@ -26,9 +34,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── Redis (Upstash-compatible local emulation) ─────────────────────────────
-  # The app's rate-limit.ts uses @upstash/redis REST client.
-  # upstash/redis Docker image provides a REST-compatible interface.
+  # ── Redis ──────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -46,43 +52,22 @@ services:
   app:
     build:
       context: .
-      target: runner   # use the production runner stage
+      target: runner
     restart: unless-stopped
     ports:
       - '3000:3000'
     depends_on:
       redis:
         condition: service_healthy
+    # Secrets come from .docker.env (gitignored). See .docker.env.example.
+    env_file:
+      - path: .docker.env
+        required: true
     environment:
       NODE_ENV: production
-      # MongoDB — Atlas direct connection (non-SRV, works from all networks)
-      MONGODB_URI: mongodb://lemonjerome:jeromelemon@ac-x3hubon-shard-00-00.ivdtmxr.mongodb.net:27017,ac-x3hubon-shard-00-01.ivdtmxr.mongodb.net:27017,ac-x3hubon-shard-00-02.ivdtmxr.mongodb.net:27017/alalai_local?ssl=true&replicaSet=atlas-juz2eb-shard-0&authSource=admin&appName=alalai
-
-      # NextAuth — required
       NEXTAUTH_URL: http://localhost:3000
-      NEXTAUTH_SECRET: u7uSmFuSJXzz1S1f+ZteSxSSVj9LiO23zhNpuhw2DZA=
-
-      # Pusher — stub values (real-time won't work without real Pusher credentials)
-      PUSHER_APP_ID: local-pusher-id
-      PUSHER_KEY: local-pusher-key
-      PUSHER_SECRET: local-pusher-secret
-      PUSHER_CLUSTER: ap1
-      NEXT_PUBLIC_PUSHER_KEY: local-pusher-key
-      NEXT_PUBLIC_PUSHER_CLUSTER: ap1
-
-      # Cloudinary — stub values (avatar upload won't work without real credentials)
-      CLOUDINARY_CLOUD_NAME: local-cloud
-      CLOUDINARY_API_KEY: local-key
-      CLOUDINARY_API_SECRET: local-secret
-
-      # Upstash — rate limiting disabled in local (no REST endpoint available)
-      # To enable, run a Upstash-compatible proxy or set DISABLE_RATE_LIMIT=true
-      UPSTASH_REDIS_REST_URL: http://redis:6379
-      UPSTASH_REDIS_REST_TOKEN: local-token
+      # Rate limiting: set to 'true' if you don't have an Upstash Redis endpoint
       DISABLE_RATE_LIMIT: 'true'
-
-      # Cron secret
-      CRON_SECRET: local-cron-secret
 
 volumes:
   mongo_data:

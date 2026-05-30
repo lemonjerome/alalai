@@ -43,6 +43,9 @@ yarn-error.log*
 .env.production.local
 # .env.example is intentionally committed (template only)
 
+# Docker local credentials — never commit
+.docker.env
+
 # vercel
 .vercel
 
