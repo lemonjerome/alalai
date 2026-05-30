@@ -19,9 +19,9 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXTAUTH_URL=http://localhost:3000
 ENV NEXTAUTH_SECRET=build-time-placeholder
-# Prevent OOM: cap each Node worker heap and limit parallel page-data workers
-ENV NODE_OPTIONS="--max-old-space-size=1536"
-ENV NEXT_CPU_COUNT=2
+# Prevent OOM: cap each Node worker heap to 512 MB
+# (experimental.cpus in next.config.ts limits workers to 2, so peak = 2 × 512 MB)
+ENV NODE_OPTIONS="--max-old-space-size=512"
 
 RUN npm run build
 
