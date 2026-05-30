@@ -19,6 +19,7 @@ import {
   User,
   CalendarDays,
   X,
+  ArrowLeft,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -340,8 +341,20 @@ export function PreJoinScreen({
 
   return (
     <>
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4 py-8">
-        <Card className="w-full max-w-md shadow-2xl border-gray-200">
+      <div className="min-h-screen bg-gray-50 px-4 py-8">
+        {/* Back button */}
+        <div className="max-w-md mx-auto mb-4">
+          <button
+            type="button"
+            onClick={() => router.push(backHref)}
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Appointments
+          </button>
+        </div>
+
+        <Card className="w-full max-w-md mx-auto shadow-sm border-gray-200">
           <CardContent className="pt-6 pb-8 space-y-5">
 
             {/* Header */}
