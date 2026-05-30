@@ -47,7 +47,7 @@ export function LoginForm() {
       // Hard redirect so the server sees the fresh session cookie (avoids client-nav cache issues)
       const session = await getSession();
       const dest = session?.user?.role === 'doctor' ? '/doctor/dashboard' : '/dashboard';
-      window.location.href = dest;
+      window.location.assign(dest);
     } catch {
       setFormError('Something went wrong. Please try again later.');
     }
