@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { signIn, getSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -23,7 +22,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { loginSchema, type LoginInput } from '@/lib/validations/auth';
 
 export function LoginForm() {
-  const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
 
   const form = useForm<LoginInput>({
@@ -46,14 +44,10 @@ export function LoginForm() {
       }
 
       toast.success('Welcome back!');
-      // Fetch the freshly-created session to get the role, then redirect to the correct dashboard
+      // Hard redirect so the server sees the fresh session cookie (avoids client-nav cache issues)
       const session = await getSession();
-      if (session?.user?.role === 'doctor') {
-        router.push('/doctor/dashboard');
-      } else {
-        router.push('/dashboard');
-      }
-      router.refresh();
+      const dest = session?.user?.role === 'doctor' ? '/doctor/dashboard' : '/dashboard';
+      window.location.href = dest;
     } catch {
       setFormError('Something went wrong. Please try again later.');
     }
