@@ -16,7 +16,7 @@ interface RescheduleDialogProps {
   onOpenChange: (open: boolean) => void;
   appointmentId: string;
   doctorId: string;
-  durationMinutes: number;
+  durationMinutes?: number;
   isPending: boolean;
   onConfirm: (scheduledAt: string) => void;
 }
@@ -34,7 +34,6 @@ export function RescheduleDialog({
   open,
   onOpenChange,
   doctorId,
-  durationMinutes,
   isPending,
   onConfirm,
 }: RescheduleDialogProps) {
