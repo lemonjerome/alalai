@@ -253,8 +253,3 @@ Full user guides and technical docs are in [docs/](docs/):
 
 > **Note on Docker builds**: `typescript.ignoreBuildErrors` and `experimental.cpus: 2` are set in `next.config.ts` to prevent OOM kills inside Docker Desktop's constrained memory environment. Type-checking still runs in CI via `npm run type-check`.
 
----
-
-## License
-
-MIT — see LICENSE file.
