@@ -71,7 +71,7 @@ export default function PatientNotificationsPage() {
 
       <div className="bg-white rounded-xl border overflow-hidden">
         <Tabs defaultValue="new">
-          <div className="px-4 pt-3 border-b">
+          <div className="px-4 py-3 border-b">
             <TabsList className="w-full">
               <TabsTrigger value="new" className="flex-1 gap-1.5">
                 New
