@@ -47,34 +47,60 @@ function CameraPreview() {
   const [denied, setDenied] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const stopCamera = useCallback(() => {
+  // Initialize camera on mount using .then/.catch — setState inside callbacks is
+  // allowed by react-hooks/set-state-in-effect; calling setState synchronously in
+  // the effect body (or in a function called from it) is what the rule forbids.
+  useEffect(() => {
+    let cancelled = false;
+    // Capture ref values at effect-run time so the cleanup function uses the same node
+    const video = videoRef.current;
+
+    navigator.mediaDevices
+      .getUserMedia({ video: true })
+      .then((stream) => {
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        streamRef.current = stream;
+        if (video) video.srcObject = stream;
+        setCameraOn(true);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setDenied(true);
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      if (video) video.srcObject = null;
+    };
+  }, []);
+
+  // Toggle handlers — called from button clicks, not from effects, so setState is fine
+  const stopCamera = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
     setCameraOn(false);
-  }, []);
+  };
 
-  const startCamera = useCallback(async () => {
+  const startCameraToggle = () => {
     setLoading(true);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      setCameraOn(true);
-      setDenied(false);
-    } catch {
-      setDenied(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void startCamera();
-    return () => stopCamera();
-  }, [startCamera, stopCamera]);
+    navigator.mediaDevices
+      .getUserMedia({ video: true })
+      .then((stream) => {
+        streamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+        setCameraOn(true);
+        setLoading(false);
+      })
+      .catch(() => {
+        setDenied(true);
+        setLoading(false);
+      });
+  };
 
   return (
     <div className="relative bg-gray-900 rounded-xl overflow-hidden aspect-video w-full">
@@ -111,7 +137,7 @@ function CameraPreview() {
       {!denied && !loading && (
         <button
           type="button"
-          onClick={cameraOn ? stopCamera : () => void startCamera()}
+          onClick={cameraOn ? stopCamera : startCameraToggle}
           className="absolute bottom-3 right-3 p-2 bg-black/60 rounded-full text-white hover:bg-black/80 transition-colors"
           title={cameraOn ? 'Turn camera off' : 'Turn camera on'}
         >
