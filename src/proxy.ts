@@ -30,10 +30,19 @@ export async function proxy(req: NextRequest) {
   }
 
   // Verify JWT cookie (uses jose — Edge-safe, no Node.js APIs)
-  // AUTH_SECRET is the NextAuth v5 canonical name; fall back to NEXTAUTH_SECRET for compatibility
+  // On HTTPS (Vercel production) NextAuth v5 prefixes the cookie with __Secure-
+  // getToken() must use secureCookie + matching cookieName/salt to decrypt it correctly
+  const isSecure = process.env.NODE_ENV === 'production';
+  const cookieName = isSecure
+    ? '__Secure-authjs.session-token'
+    : 'authjs.session-token';
+
   const token = await getToken({
     req,
     secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+    secureCookie: isSecure,
+    cookieName,
+    salt: cookieName, // NextAuth v5 uses the cookie name as the JWE salt
   });
 
   // Unauthenticated → redirect to login
